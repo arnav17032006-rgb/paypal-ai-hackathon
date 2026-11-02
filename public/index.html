@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AgentReady</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-grid.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-theme-quartz.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="logo">◆</span> AgentReady <small>safe agent payments on PayPal</small></div>
+    <div id="modes"></div>
+  </header>
+
+  <nav>
+    <button data-tab="shop" class="active">Shop with agent</button>
+    <button data-tab="merchant">Become agent-ready</button>
+    <button data-tab="orders">Orders &amp; ledger</button>
+    <button data-tab="mandate">Mandate</button>
+  </nav>
+
+  <main>
+    <section id="tab-shop" class="tab active">
+      <div class="card">
+        <h2>Tell your agent what to buy</h2>
+        <p class="muted">It searches agent-ready shops, checks every option against your mandate and the trust guard, then pays through PayPal.</p>
+        <form id="goal-form">
+          <textarea id="goal" rows="2" placeholder="e.g. Get a chocolate birthday cake under $30, needed tomorrow"></textarea>
+          <div class="row">
+            <button type="submit" class="primary" id="goal-btn">Run agent</button>
+            <span class="chips">
+              <button type="button" class="chip">Chocolate birthday cake under $30, needed tomorrow</button>
+              <button type="button" class="chip">Cheap wireless earbuds as a gift</button>
+              <button type="button" class="chip">A machine learning textbook for my friend</button>
+            </span>
+          </div>
+        </form>
+      </div>
+      <div id="agent-result"></div>
+    </section>
+
+    <section id="tab-merchant" class="tab">
+      <div class="card">
+        <h2>Make your shop agent-ready in a minute</h2>
+        <p class="muted">Paste your Instagram captions, WhatsApp price list or website text, or give a URL. AI turns it into a catalog AI agents can buy from, paid straight into your PayPal.</p>
+        <form id="onboard-form">
+          <input id="ob-url" type="url" placeholder="https://your-shop.example (optional)" />
+          <textarea id="ob-text" rows="7" placeholder="Paste your shop text here"></textarea>
+          <input id="ob-email" type="email" placeholder="Your PayPal (sandbox) email for payouts" />
+          <div class="row">
+            <button type="submit" class="primary" id="ob-btn">Extract catalog</button>
+            <button type="button" id="ob-sample">Use a sample</button>
+          </div>
+        </form>
+      </div>
+      <div id="onboard-result"></div>
+      <div class="card"><h3>Agent-ready merchants</h3><div id="grid-merchants" class="ag-theme-quartz grid"></div></div>
+    </section>
+
+    <section id="tab-orders" class="tab">
+      <div id="kpis" class="kpis"></div>
+      <div class="card">
+        <h3>Agent orders</h3>
+        <p class="muted">Funds are only held at approval. The merchant's "Mark delivered" captures them; "Release" voids the hold.</p>
+        <div id="grid-orders" class="ag-theme-quartz grid"></div>
+      </div>
+      <div class="card"><h3>Audit trail</h3><div id="grid-events" class="ag-theme-quartz grid"></div></div>
+    </section>
+
+    <section id="tab-mandate" class="tab">
+      <div class="card">
+        <h2>Spending mandate</h2>
+        <p class="muted">The rules your agent can never break. The trust guard enforces them in code before any PayPal order is created.</p>
+        <form id="mandate-form" class="mandate"></form>
+        <hr />
+        <button id="reset-btn" class="danger">Reset demo data</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

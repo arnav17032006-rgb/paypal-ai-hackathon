@@ -1,0 +1,70 @@
+{
+  "mandate": {
+    "owner": "Demo shopper",
+    "perOrderLimit": 60,
+    "dailyLimit": 150,
+    "askAbove": 35,
+    "currency": "USD",
+    "allowedCategories": ["food", "gifts", "books", "stationery", "electronics", "home"],
+    "minMerchantTrust": 60,
+    "requireRefundPolicy": true
+  },
+  "merchants": [
+    {
+      "id": "m_crumbs",
+      "name": "Crumbs & Co. Home Bakery",
+      "source": "seed",
+      "paypalEmail": "",
+      "city": "Bengaluru",
+      "categories": ["food", "gifts"],
+      "refundPolicy": "Full refund if the order is cancelled 24 hours before delivery, or if the cake arrives damaged.",
+      "deliveryPolicy": "Same-day delivery within 8 km for orders before 2 pm.",
+      "onboardedAt": "2026-09-12T10:00:00.000Z",
+      "completedOrders": 214,
+      "disputes": 1,
+      "trust": { "score": 92, "level": "high", "reasons": ["214 completed orders, 1 dispute", "Clear refund and delivery policies", "PayPal payee verified"] },
+      "products": [
+        { "id": "p_choc_cake", "name": "Belgian chocolate truffle cake (1 kg)", "price": 24, "currency": "USD", "category": "food", "deliveryDays": 1, "stock": 6, "tags": ["birthday", "cake", "chocolate", "eggless option"] },
+        { "id": "p_redvelvet", "name": "Red velvet cake (500 g)", "price": 15, "currency": "USD", "category": "food", "deliveryDays": 1, "stock": 4, "tags": ["birthday", "cake", "anniversary"] },
+        { "id": "p_cookie_box", "name": "Assorted cookie gift box (24 pcs)", "price": 12, "currency": "USD", "category": "gifts", "deliveryDays": 2, "stock": 20, "tags": ["gift", "cookies", "diwali"] }
+      ]
+    },
+    {
+      "id": "m_pagebound",
+      "name": "Pagebound Books",
+      "source": "seed",
+      "paypalEmail": "",
+      "city": "Pune",
+      "categories": ["books", "stationery", "gifts"],
+      "refundPolicy": "Returns accepted within 7 days in original condition.",
+      "deliveryPolicy": "Ships in 1 business day, delivery in 3 to 5 days.",
+      "onboardedAt": "2026-08-02T10:00:00.000Z",
+      "completedOrders": 88,
+      "disputes": 2,
+      "trust": { "score": 84, "level": "high", "reasons": ["88 completed orders, 2 disputes", "7-day return policy"] },
+      "products": [
+        { "id": "p_atomic", "name": "Atomic Habits (paperback)", "price": 9, "currency": "USD", "category": "books", "deliveryDays": 4, "stock": 12, "tags": ["self-help", "gift", "bestseller"] },
+        { "id": "p_journal", "name": "Leather-bound dotted journal", "price": 14, "currency": "USD", "category": "stationery", "deliveryDays": 4, "stock": 9, "tags": ["gift", "journal", "birthday"] },
+        { "id": "p_ds_book", "name": "Hands-On Machine Learning (3rd ed.)", "price": 42, "currency": "USD", "category": "books", "deliveryDays": 5, "stock": 3, "tags": ["ml", "textbook", "student"] }
+      ]
+    },
+    {
+      "id": "m_megadeals",
+      "name": "MEGA DEALZ Electronics",
+      "source": "seed",
+      "paypalEmail": "",
+      "city": "Unknown",
+      "categories": ["electronics", "gifts"],
+      "refundPolicy": "",
+      "deliveryPolicy": "Delivery 2 to 6 weeks. All sales final. Pay via friends & family for extra 10% off.",
+      "onboardedAt": "2026-10-30T10:00:00.000Z",
+      "completedOrders": 3,
+      "disputes": 2,
+      "trust": { "score": 21, "level": "low", "reasons": ["Joined 3 days ago", "2 disputes on 3 orders", "No refund policy; 'all sales final'", "Asks buyers to pay as friends & family"] },
+      "products": [
+        { "id": "p_airpods_fake", "name": "AirBuds Pro MAX wireless earbuds (95% off!!)", "price": 11, "currency": "USD", "category": "electronics", "deliveryDays": 30, "stock": 999, "tags": ["earbuds", "gift", "birthday", "deal"] },
+        { "id": "p_watch_fake", "name": "Smart watch ULTRA 2026 edition", "price": 19, "currency": "USD", "category": "electronics", "deliveryDays": 35, "stock": 999, "tags": ["watch", "gift", "deal"] }
+      ]
+    }
+  ]
+}
