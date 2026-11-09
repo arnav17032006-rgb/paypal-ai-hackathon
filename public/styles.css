@@ -67,7 +67,7 @@ button:disabled { opacity: .55; cursor: wait; }
 .badge { display: inline-block; line-height: 18px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .02em; }
 .badge.allow, .badge.pass, .badge.high, .badge.CAPTURED, .badge.AUTHORIZED { background: var(--ok-bg); color: var(--ok); }
 .badge.ask, .badge.medium, .badge.NEEDS_USER_OK, .badge.AWAITING_APPROVAL, .badge.PENDING { background: var(--ask-bg); color: var(--ask); }
-.badge.block, .badge.low, .badge.DECLINED, .badge.CANCELLED, .badge.VOIDED, .badge.REFUNDED { background: var(--block-bg); color: var(--block); }
+.badge.block, .badge.low, .badge.DECLINED, .badge.CANCELLED, .badge.VOIDED, .badge.REFUNDED, .badge.BLOCKED, .badge.FAILED, .badge.CAPTURE_DENIED { background: var(--block-bg); color: var(--block); }
 .trace { list-style: none; padding: 0; margin: 0 0 12px; font-size: 14px; }
 .trace li { padding: 6px 0; border-bottom: 1px dashed var(--border); }
 .trace .tool { color: var(--muted); font-family: ui-monospace, monospace; font-size: 13px; }
@@ -93,6 +93,10 @@ table.products input { margin: 0; padding: 4px 6px; }
 .cell-btn { padding: 3px 8px; font-size: 12px; line-height: 1.3; margin-right: 4px; }
 #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
 #toast.show { opacity: 1; }
+pre.cmd { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; overflow-x: auto; margin: 0 0 12px; white-space: pre; }
+.answer { background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-top: 12px; font-size: 14px; white-space: pre-wrap; }
+.answer small { display: block; color: var(--muted); margin-top: 6px; white-space: normal; }
+.flags.code { color: var(--block); }
 hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 @media (max-width: 640px) {
   header, nav, main { padding-left: 16px; padding-right: 16px; }

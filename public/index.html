@@ -39,6 +39,14 @@
         </form>
       </div>
       <div id="agent-result"></div>
+      <div class="card">
+        <h3>Bring your own agent (MCP)</h3>
+        <p class="muted">Any MCP-capable assistant can shop these stores through the same guard. It gets search, guard dry-run and checkout tools, and a person still approves every payment on PayPal.</p>
+        <p class="muted"><b>Claude Code</b></p>
+        <pre class="cmd" id="mcp-claude-code"></pre>
+        <p class="muted"><b>Claude Desktop</b>: Settings → Developer → Edit Config, then restart</p>
+        <pre class="cmd" id="mcp-desktop"></pre>
+      </div>
     </section>
 
     <section id="tab-merchant" class="tab">
@@ -52,6 +60,7 @@
           <div class="row">
             <button type="submit" class="primary" id="ob-btn">Extract catalog</button>
             <button type="button" id="ob-sample">Use a sample</button>
+            <button type="button" id="ob-sample-bad">Try a suspicious shop</button>
           </div>
         </form>
       </div>
@@ -65,6 +74,15 @@
         <h3>Agent orders</h3>
         <p class="muted">Funds are only held at approval. The merchant's "Mark delivered" captures them; "Release" voids the hold.</p>
         <div id="grid-orders" class="ag-theme-quartz grid"></div>
+      </div>
+      <div class="card">
+        <h3>Ask about the money</h3>
+        <p class="muted" id="assistant-note">Answers from AgentReady's ledger.</p>
+        <form id="assistant-form" class="row">
+          <input id="assistant-q" placeholder="e.g. How much have agents paid Crumbs & Co. this week, and is anything still held?" style="flex:1;margin:0" />
+          <button class="primary" id="assistant-btn">Ask</button>
+        </form>
+        <div id="assistant-answer"></div>
       </div>
       <div class="card"><h3>Audit trail</h3><div id="grid-events" class="ag-theme-quartz grid"></div></div>
     </section>

@@ -10,10 +10,11 @@ const SECRET = process.env.PAYPAL_CLIENT_SECRET;
 const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 export const paypalMode = CLIENT_ID && SECRET ? "sandbox" : "simulated";
+export const isSandbox = !/api-m\.paypal\.com/.test(BASE);
 
 let cachedToken = null;
 
-async function accessToken() {
+export async function accessToken() {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
   const res = await fetch(`${BASE}/v1/oauth2/token`, {
     method: "POST",
@@ -148,6 +149,29 @@ export async function refundCapture(captureId, amount, currency, note) {
     { amount: { value: amount.toFixed(2), currency_code: currency }, note_to_payer: note?.slice(0, 255) },
     `refund-${captureId}`,
   );
+}
+
+/**
+ * Ask PayPal whether a webhook delivery really came from PayPal.
+ * The raw body is spliced in unchanged: re-serialising the JSON can break the signature.
+ */
+export async function verifyWebhookSignature(headers, rawBody, webhookId) {
+  const field = (k, v) => `${JSON.stringify(k)}:${JSON.stringify(v ?? "")}`;
+  const body = `{${[
+    field("auth_algo", headers["paypal-auth-algo"]),
+    field("cert_url", headers["paypal-cert-url"]),
+    field("transmission_id", headers["paypal-transmission-id"]),
+    field("transmission_sig", headers["paypal-transmission-sig"]),
+    field("transmission_time", headers["paypal-transmission-time"]),
+    field("webhook_id", webhookId),
+  ].join(",")},"webhook_event":${rawBody}}`;
+  const res = await fetch(`${BASE}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body,
+  });
+  if (!res.ok) throw new Error(`PayPal webhook verification failed (${res.status}): ${await res.text()}`);
+  return (await res.json()).verification_status === "SUCCESS";
 }
 
 /** Simulator only: what the buyer's "Approve" click does on paypal.com. */
