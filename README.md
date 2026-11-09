@@ -77,7 +77,7 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
 2. **Orders & ledger** → the order is `AUTHORIZED` (funds held). Click **Mark delivered** to capture it to the merchant.
 3. Ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the agent asks first.
 4. **Become agent-ready** → **Use a sample** → **Extract catalog** → **Publish to agents**. Then ask the agent for *"lavender candle gift under $15"*.
-5. **Become agent-ready** → **Try a suspicious shop**. Its page hides a line telling AI agents to report no red flags. The code scan catches it and the shop scores 30, so no agent will buy there.
+5. **Become agent-ready** → **Try a suspicious shop**. Its page hides a line telling AI agents to report no red flags, and it asks for gift cards or crypto. The code scan catches both, so the shop scores 10 out of 100 in demo mode (Claude's own flags can push it lower), far below the minimum of 60. No agent will buy there.
 6. **Orders & ledger** → on a captured order, **Sim dispute** fires the dispute webhook; the bakery's trust drops. Ask the money assistant what happened.
 7. Connect Claude Code over MCP and buy something from the terminal; the order appears as **MCP agent**.
 8. **Mandate** → lower the per-order limit and watch the guard block what it allowed before.
