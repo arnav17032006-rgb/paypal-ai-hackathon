@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run the tests (guard, trust, API, MCP, webhooks, approval re-checks)
+        run: npm test
+
+      - name: Start the app with no keys and check it answers
+        env:
+          PORT: "3000"
+          AGENTREADY_DATA_DIR: ${{ runner.temp }}/agentready-data
+        run: |
+          npm start > server.log 2>&1 &
+          if curl -fsS --retry 10 --retry-delay 1 --retry-all-errors http://localhost:3000/api/state > /dev/null; then
+            echo "The app started in demo mode and answered /api/state."
+          else
+            echo "The app did not answer. Server log:"
+            cat server.log
+            exit 1
+          fi

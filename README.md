@@ -1,5 +1,7 @@
 # AgentReady: safe agent payments on PayPal
 
+[![CI](https://github.com/arnav17032006-rgb/paypal-ai-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/arnav17032006-rgb/paypal-ai-hackathon/actions/workflows/ci.yml)
+
 **Make any small shop buyable by AI agents, and make sure those agents can only spend money safely.**
 
 Built for the [PayPal AI Hackathon 2026](https://paypalaihackathon.devpost.com/).
@@ -27,7 +29,7 @@ AI agents are starting to shop for people. Two things stand in the way:
 
 ## Run it locally (2 minutes)
 
-Requires Node.js 20 or newer.
+Requires Node.js 22 or newer.
 
 ```bash
 git clone https://github.com/arnav17032006-rgb/paypal-ai-hackathon.git
@@ -110,6 +112,8 @@ server/store.js    JSON file store (data/db.json)
 server/seed.json   Demo mandate and merchants
 public/            Web app (vanilla JS + AG Grid Community)
 test/              Guard, trust and end-to-end API tests (npm test)
+.github/workflows/ CI: the tests on Node 22 and 24, plus a start-up check, on every push
+DEVPOST_SUBMISSION.md  Hackathon write-up, testing steps for judges and the video script
 ```
 
 ## Deploy on Render

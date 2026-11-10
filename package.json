@@ -10,7 +10,7 @@
     "test": "ANTHROPIC_API_KEY= ANTHROPIC_AUTH_TOKEN= PAYPAL_CLIENT_ID= PAYPAL_CLIENT_SECRET= PAYPAL_WEBHOOK_ID= AGENTREADY_DATA_DIR=.test-data node --test --test-concurrency=1; s=$?; rm -rf .test-data; exit $s"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "license": "MIT",
   "dependencies": {
