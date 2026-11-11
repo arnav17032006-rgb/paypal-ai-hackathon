@@ -6,6 +6,13 @@
 
 Built for the [PayPal AI Hackathon 2026](https://paypalaihackathon.devpost.com/).
 
+| | |
+|---|---|
+| ![The agent picks a trusted bakery and the guard blocks a scam shop](docs/screenshots/1-agent-run.jpg) | ![A shop with a hidden instruction for AI agents scores 10 out of 100](docs/screenshots/2-suspicious-shop.jpg) |
+| ![Merchants see which rule stopped each sale and what to do](docs/screenshots/3-why-agents-didnt-buy.jpg) | ![Orders, holds and captures in AG Grid](docs/screenshots/4-orders-ledger.jpg) |
+
+Screenshots are from demo mode (no keys).
+
 ## The problem
 
 AI agents are starting to shop for people. Two things stand in the way:
@@ -24,8 +31,9 @@ AI agents are starting to shop for people. Two things stand in the way:
 | **Trust guard** | Deterministic rules on every payment: per-order and daily limits, allowed categories, merchant trust score, refund policy, scam phrases, delivery deadline, and an "ask me above $X" threshold. The model can explain a decision but never override it. Limits and trust can change while an order waits, so the guard decides three times: at checkout, when the owner approves a waiting order, and just before funds are held. Unpaid orders count against the daily limit and stock, so parallel checkouts can't race past them. Once funds are held the decision is made, and capture only settles it. | Runs before any PayPal order exists, and again before any hold |
 | **Escrow-style settlement** | Buyer approves on PayPal, so funds are only **held**. When the merchant marks it delivered, the hold is **captured**. Otherwise it is **voided** or later **refunded**. | Authorize, Capture, Void, Refund, idempotent `PayPal-Request-Id` |
 | **Webhooks** | PayPal events keep orders right when the redirect never comes back (buyer approved and closed the tab), a hold expires, or money is refunded or disputed on paypal.com. A dispute lowers the merchant's trust, so the guard reacts on the next sale. | Signature verified with `verify-webhook-signature`, each event id applied once |
+| **Why agents didn't buy** | Every sale the guard stops is recorded per shop, product and rule. Merchants see how often each rule cost them a sale and what to do about it, for example publish a refund policy or remove risky payment wording. Rules that are the buyer's own limits say so. | |
 | **Money assistant** | Merchants ask *"how much have agents paid me this week?"*. Claude answers from AgentReady's ledger and, read-only, from the merchant's PayPal account. | **Agent Toolkit**: `list_transactions`, `list_disputes`, `get_order` |
-| **Dashboards** | AG Grid views of agent orders (with actions and which agent placed them), the audit trail, and merchant trust scores with reasons. | Order and capture IDs on every row |
+| **Dashboards** | AG Grid views of agent orders (with actions and which agent placed them), the audit trail, merchant trust scores with reasons, and lost sales. | Order and capture IDs on every row |
 
 ## Run it locally (2 minutes)
 
@@ -94,7 +102,7 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
   - Server-side refusal fallback (`fallbacks: "default"`) is enabled on every call.
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): catalog sync on publish (`create_product`) and the assistant's read-only tools. Write actions are not enabled for the model.
 - **MCP** (`@modelcontextprotocol/sdk`): the `/mcp` endpoint for outside agents.
-- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (32 tests, including MCP, webhook and stale-approval flows end to end).
+- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (34 tests, including MCP, webhook and stale-approval flows end to end).
 
 ## Project layout
 
@@ -115,6 +123,15 @@ test/              Guard, trust and end-to-end API tests (npm test)
 .github/workflows/ CI: the tests on Node 22 and 24, plus a start-up check, on every push
 DEVPOST_SUBMISSION.md  Hackathon write-up, testing steps for judges and the video script
 ```
+
+## Limitations
+
+- **Sandbox only.** No real money moves. Without PayPal keys the app uses a local simulator that mirrors PayPal's responses, and the header says so.
+- **The demo shops are seed data.** Their order counts, disputes and trust scores are made up for the demo. Only shops you onboard are scored from their own text.
+- **The red-flag scan matches patterns.** Reworded scam text or a new kind of injection can get past it. Spending limits and the buyer's PayPal approval still apply.
+- **One owner, no sign-in.** There is a single spending mandate and no user accounts, and the MCP endpoint is open. Anyone who can reach the URL can use it, so this is a demo, not a multi-user service.
+- **A JSON file is the database.** It suits one server process. On a host without a persistent disk, data resets when the service restarts.
+- **Seed merchants have no payee email,** so in the sandbox their payments go to the app's own business account. Paying a merchant directly needs their PayPal email at onboarding.
 
 ## Deploy on Render
 

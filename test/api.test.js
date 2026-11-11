@@ -122,3 +122,28 @@ test("capturing twice is refused", async () => {
   assert.equal((await post(`/api/orders/${order_id}/fulfil`, {})).status, 200);
   assert.equal((await post(`/api/orders/${order_id}/fulfil`, {})).status, 409);
 });
+
+test("lost sales tell a merchant which rule stopped agents, counted once per attempt", async () => {
+  await post("/api/agent/run", { goal: "Cheap wireless earbuds as a gift" });
+  const { call, client } = await mcpClient();
+  await call("check_purchase", { product_id: "p_airpods_fake", quantity: 1 });
+  const bought = await call("checkout", { product_id: "p_airpods_fake", quantity: 1, reason: "test" });
+  await client.close();
+  assert.equal(bought.status, "blocked");
+
+  const { lostSales } = await (await fetch(`${base}/api/state`)).json();
+  const trust = lostSales.find((r) => r.rule === "merchant_trust" && r.productName.includes("AirBuds"));
+  assert.ok(trust, "the scam shop's trust block is listed");
+  // The web agent once, and the MCP agent once: its dry-run and its checkout are the same attempt.
+  assert.equal(trust.times, 2);
+  assert.equal(trust.agents.length, 2);
+  assert.ok(trust.agents.includes("web agent"));
+  assert.match(trust.advice, /trust score/i);
+  assert.ok(lostSales.every((r) => r.merchantName && r.detail));
+});
+
+test("an allowed purchase is not a lost sale", async () => {
+  await post("/api/agent/run", { goal: "Chocolate birthday cake under $30, needed tomorrow" });
+  const { lostSales } = await (await fetch(`${base}/api/state`)).json();
+  assert.ok(!lostSales.some((r) => /chocolate truffle/i.test(r.productName)));
+});

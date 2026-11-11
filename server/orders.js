@@ -76,7 +76,9 @@ export async function placeOrder({ productId, quantity = 1, deadlineDays, reason
   const verdict = guard.evaluate({ productId, quantity, deadlineDays: deadlineDays || undefined });
   if (verdict.decision === guard.DECISION.BLOCK || !found) {
     if (channel !== "web agent") {
+      // The web agent's blocks are logged and counted by its own run, which sees every candidate it tried.
       store.log("guard", `Blocked ${found?.product.name || productId} for ${channel}`, { checks: verdict.checks });
+      store.recordMiss(verdict, channel);
     }
     return { order: null, verdict };
   }
@@ -112,6 +114,7 @@ export async function confirm(o) {
   if (verdict.decision === guard.DECISION.BLOCK) {
     const rules = blockedRules(verdict);
     store.log("guard", `Blocked your approval of ${o.productName} ($${o.amount}): ${rules}`, { orderId: o.id, checks: verdict.checks });
+    store.recordMiss(verdict, o.channel);
     throw new GuardBlockedError(o, rules);
   }
   store.log("user", `You approved ${o.productName} ($${o.amount}) above the auto-approve threshold`, { orderId: o.id });
@@ -127,6 +130,7 @@ export function authorize(o, via) {
       // Without an authorization PayPal holds nothing, so stopping here means no money moves.
       o.status = "BLOCKED";
       o.checks = verdict.checks;
+      store.recordMiss(verdict, o.channel);
       store.log("guard", `Blocked ${o.productName} ($${o.amount}) after the buyer approved it, so no funds were held: ${blockedRules(verdict)}`, { orderId: o.id, checks: verdict.checks });
       return o;
     }

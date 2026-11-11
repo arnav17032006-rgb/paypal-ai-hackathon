@@ -79,6 +79,17 @@ grid("grid-merchants", [
   { headerName: "Why this score", flex: 3, minWidth: 260, valueGetter: (p) => p.data.trust.reasons.join("; "), wrapText: true, autoHeight: true },
 ]);
 
+grid("grid-lost", [
+  { field: "merchantName", headerName: "Shop", flex: 2, minWidth: 170 },
+  { field: "productName", headerName: "Product", flex: 2, minWidth: 190 },
+  { field: "rule", headerName: "Stopped by", valueFormatter: (p) => p.value.replace(/_/g, " "), minWidth: 150 },
+  { field: "times", headerName: "Times", filter: "agNumberColumnFilter", width: 100, sort: "desc" },
+  { field: "advice", headerName: "What to do", flex: 4, minWidth: 320, wrapText: true, autoHeight: true },
+  { field: "detail", headerName: "What the guard saw", flex: 4, minWidth: 320, wrapText: true, autoHeight: true },
+  { field: "agents", headerName: "Agents", valueFormatter: (p) => p.value.join(", "), minWidth: 130 },
+  { field: "lastAt", headerName: "Last seen", valueFormatter: (p) => new Date(p.value).toLocaleString(), minWidth: 170 },
+]);
+
 function orderActions(o) {
   const el = document.createElement("span");
   const btn = (label, fn, cls = "", title = "") => {
@@ -160,6 +171,7 @@ async function refresh() {
   grids["grid-orders"].api.setGridOption("rowData", state.orders);
   grids["grid-events"].api.setGridOption("rowData", state.events);
   grids["grid-merchants"].api.setGridOption("rowData", state.merchants);
+  grids["grid-lost"].api.setGridOption("rowData", state.lostSales);
   if (!document.activeElement?.closest("#mandate-form")) renderMandate();
 }
 

@@ -56,6 +56,8 @@ The model can explain a decision but can't override it. Limits and trust can cha
 
 **An injection-resistant trust score.** The score is computed on the server from the shop's own text, never from what the browser or the AI sends back. A code scan catches instructions aimed at AI agents, unprotected payment methods, "all sales final" and implausible discounts. A refund policy only counts if it really appears in the shop's text.
 
+**Why agents didn't buy.** Every sale the guard stops is recorded per shop, product and rule. Merchants see how often each rule cost them a sale and what to do about it, such as publishing a refund policy or removing risky payment wording.
+
 **Escrow-style settlement on PayPal.** Orders are created with `intent: AUTHORIZE`, so when the buyer approves, the funds are only **held**. When the merchant marks the order delivered, the hold is **captured**. Otherwise it is **voided**, and captured orders can be **refunded**.
 
 **Bring your own agent.** Any MCP client (Claude Code, Claude Desktop and others) can shop at `/mcp` with six tools: search, product details, spending rules, a guard dry-run, checkout and order status. Checkout runs the same guard, and a person still approves every payment on PayPal.
@@ -81,7 +83,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
   - Webhooks checked with `verify-webhook-signature` against the exact raw request body, and each event applied once.
 - **PayPal Agent Toolkit:** `create_product` when a merchant publishes, and read-only transaction, dispute, order, product and invoice tools for the money assistant. Write actions are never given to the model.
 - **MCP:** the official TypeScript SDK, as a stateless Streamable HTTP endpoint.
-- **Tests:** 32 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
+- **Tests:** 34 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
 - **Deploy:** a Render Blueprint (`render.yaml`) with a health check.
 - **No keys needed to try it.** Without keys, a rule-based extractor and shopper stand in for Claude, and a local simulator that returns PayPal's response shapes stands in for the sandbox. The header shows which mode is active.
 
@@ -98,7 +100,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 - No money moves without a person approving it on PayPal, and no agent, prompt or shop page can change the owner's rules.
 - Any MCP agent, not just ours, can shop AgentReady stores under the same guard.
 - The full authorize, capture, void, refund and dispute cycle, with webhooks and idempotency keys.
-- 32 automated tests, including stale approvals, parallel checkouts and webhook retries.
+- 34 automated tests, including stale approvals, parallel checkouts and webhook retries.
 - It runs with zero setup, and switches to Claude and the real PayPal sandbox as soon as keys are added.
 
 #### What we learned
@@ -136,6 +138,9 @@ The model can explain a decision but can't override it. Limits and trust can cha
 4. The suspicious shop scored 10/100, with the hidden line it caught.
 5. Claude Code buying through MCP, and the order showing as **MCP agent**.
 6. The Mandate tab.
+7. The "Why agents didn't buy" grid on the merchant tab.
+
+Four demo-mode screenshots are already in `docs/screenshots/`. They are 800 x 500, so retake them at full size for the gallery.
 
 ---
 
@@ -177,7 +182,7 @@ Open http://localhost:3000. It runs without any keys, using the PayPal simulator
 4. **Become agent-ready** → **Try a suspicious shop** → **Extract catalog**. The code scan catches the hidden instruction aimed at AI agents, and the shop scores 10/100.
 5. Connect your own agent: `claude mcp add --transport http agentready http://localhost:3000/mcp`, then ask it to buy something.
 
-`npm test` runs all 32 tests.
+`npm test` runs all 34 tests.
 
 ---
 

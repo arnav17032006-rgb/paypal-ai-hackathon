@@ -16,6 +16,7 @@ export function load() {
   if (fs.existsSync(DB_FILE)) {
     db = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
     db.webhookEvents ||= [];
+    db.misses ||= [];
   } else {
     reset();
   }
@@ -27,6 +28,7 @@ export function reset() {
   db.orders = [];
   db.events = [];
   db.webhookEvents = [];
+  db.misses = [];
   save();
   return db;
 }
@@ -89,4 +91,59 @@ export function reservedUnits(productId, excludeOrderId) {
   return db.orders
     .filter((o) => o.productId === productId && o.id !== excludeOrderId && UNPAID.includes(o.status) && Date.parse(committedAt(o)) > cutoff)
     .reduce((s, o) => s + o.quantity, 0);
+}
+
+// ---------------------------------------------------------------- lost sales
+
+// What a merchant can do about each rule that stops a sale. Buyer-side rules say so, so nobody chases them.
+const MISS_ADVICE = {
+  merchant_trust: "Your trust score is below this buyer's minimum. Publish a refund policy, add your PayPal email, remove risky payment wording and avoid disputes.",
+  refund_policy: "Add a refund policy to your shop text. This buyer only shops where one is published.",
+  scam_signals: "Remove the flagged wording (unprotected payment methods, \"all sales final\", extreme discounts) from your listing and policies.",
+  stock: "Agents wanted more than you had in stock. Restock or raise the stock count.",
+  per_order_limit: "The price is above this buyer's per-order limit. A smaller size or bundle could fit.",
+  category: "This buyer does not allow the product's category. Check the category is the right one.",
+  currency: "List prices in USD.",
+  daily_limit: "The buyer had reached their daily limit. Nothing to fix on your side.",
+};
+const MISS_REPEAT_MS = 60 * 1000;
+
+/**
+ * Remember that the guard stopped an agent buying this product, one entry per blocking rule.
+ * An agent often dry-runs and then tries to check out; the same miss within a minute counts once.
+ */
+export function recordMiss(verdict, channel = "web agent") {
+  if (!verdict.product || !verdict.merchant) return;
+  const now = Date.now();
+  for (const c of verdict.checks.filter((x) => x.severity === "block")) {
+    const repeat = db.misses.find((m) => m.productId === verdict.product.id && m.rule === c.rule && m.channel === channel && now - Date.parse(m.at) < MISS_REPEAT_MS);
+    if (repeat) continue;
+    db.misses.unshift({
+      at: new Date(now).toISOString(), merchantId: verdict.merchant.id, merchantName: verdict.merchant.name,
+      productId: verdict.product.id, productName: verdict.product.name, channel, rule: c.rule, detail: c.detail,
+    });
+  }
+  db.misses = db.misses.slice(0, 1000);
+  save();
+}
+
+/** Lost sales grouped by product and rule, most frequent first, with what the merchant can do. */
+export function lostSales() {
+  const groups = new Map();
+  for (const m of db.misses) {
+    const key = m.productId + "|" + m.rule;
+    const g = groups.get(key);
+    if (g) {
+      g.times += 1;
+      if (!g.agents.includes(m.channel)) g.agents.push(m.channel);
+    } else {
+      // Misses are newest first, so the first one seen carries the latest time and detail.
+      groups.set(key, {
+        merchantId: m.merchantId, merchantName: m.merchantName, productName: m.productName, rule: m.rule,
+        times: 1, lastAt: m.at, agents: [m.channel], detail: m.detail,
+        advice: MISS_ADVICE[m.rule] || "See the detail for what the guard checked.",
+      });
+    }
+  }
+  return [...groups.values()].sort((a, b) => b.times - a.times || b.lastAt.localeCompare(a.lastAt));
 }

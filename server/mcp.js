@@ -66,6 +66,7 @@ function buildServer() {
     inputSchema: { product_id: z.string(), quantity: z.number().int().min(1).default(1), deadline_days: z.number().int().min(0).optional().describe("Days until it is needed") },
   }, async ({ product_id, quantity, deadline_days }) => {
     const verdict = guard.evaluate({ productId: product_id, quantity, deadlineDays: deadline_days || undefined });
+    if (verdict.decision === guard.DECISION.BLOCK) store.recordMiss(verdict, CHANNEL);
     return json(guardView(verdict));
   });
 

@@ -42,6 +42,7 @@ app.get("/api/state", (req, res) => {
     merchants: d.merchants,
     orders: d.orders,
     events: d.events.slice(0, 100),
+    lostSales: store.lostSales(),
   });
 });
 
@@ -193,7 +194,9 @@ app.post("/api/agent/run", wrap(async (req, res) => {
   store.log("agent", `Agent goal: ${goal}`);
   const run = await ai.runShopper(goal);
   for (const c of run.checks) {
-    if (c.decision === "block") store.log("guard", `Blocked ${c.productName} from ${c.merchantName}`, { checks: c.checks });
+    if (c.decision !== "block") continue;
+    store.log("guard", `Blocked ${c.productName} from ${c.merchantName}`, { checks: c.checks });
+    store.recordMiss({ ...c, ...store.product(c.productId) });
   }
   let order = null;
   if (run.checkout) {
