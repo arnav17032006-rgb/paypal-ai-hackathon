@@ -6,23 +6,26 @@
 
 Built for the [PayPal AI Hackathon 2026](https://paypalaihackathon.devpost.com/).
 
-**Live demo:** https://agentready-6odi.onrender.com (click **Demo buyer** or **Demo shop owner**; the free instance can take about a minute to wake up)
+**Live demo:** https://agentready-6odi.onrender.com (click **Try it as a buyer** or **Try it as a shop owner**; the landing page also has a live scam scanner you can use without logging in. The free instance can take about a minute to wake up)
 
 | | |
 |---|---|
 | ![The agent picks a trusted bakery and the guard blocks a scam shop](docs/screenshots/1-agent-run.jpg) | ![A shop with a hidden instruction for AI agents scores 10 out of 100](docs/screenshots/2-suspicious-shop.jpg) |
 | ![Merchants see which rule stopped each sale and what to do](docs/screenshots/3-why-agents-didnt-buy.jpg) | ![Orders, holds and captures in AG Grid](docs/screenshots/4-orders-ledger.jpg) |
 | ![Every shop with its trust score and what the buyer's rules allow](docs/screenshots/6-agent-ready-shops.jpg) | ![One order: where it is, PayPal ids and the full guard report](docs/screenshots/7-order-guard-report.jpg) |
-| ![Spending rules with the guard's live verdict on every product](docs/screenshots/8-spending-rules.jpg) | ![Login page with one-click demo accounts](docs/screenshots/5-login.jpg) |
+| ![Spending rules with the guard's live verdict on every product](docs/screenshots/8-spending-rules.jpg) | ![Landing page with one-click demo accounts](docs/screenshots/5-login.jpg) |
+| ![The landing page's live scanner catching a hidden instruction for AI agents](docs/screenshots/9-live-scanner.jpg) | ![Shop cards and the editable live catalog in AG Grid](docs/screenshots/10-my-shops-catalog.jpg) |
 
 Screenshots are from demo mode (no keys).
 
 ## What you see
 
-- **Buyer:** a goal box for the agent, a step-by-step run (search, each guard check, checkout), the guardrails with today's spend, and an inbox of payments waiting for approval. **Agent-ready shops** lists every shop with its trust score and, per product, what the buyer's rules allow. **Spending rules** shows the guard's real verdict on every listed product ("agent can buy", "asks you first", "blocked"), from the same code path as a real checkout.
-- **Shop owner:** shop cards with a trust gauge and an agent-readiness checklist, **Why agents didn't buy** with the blocking rules as a chart, and **Orders & payouts** with a bar showing where the money is (waiting, held, paid, refunded).
+- **Landing page:** the problem, how it works, what is wired up, and a **live scanner**: paste any shop's text and see the code scan's trust score and flags (`POST /api/public/scan`, no login, no model call).
+- **Buyer:** a goal box, the agent's run as a numbered log (search, each guard check, checkout), and the guard's verdict as a receipt, rule by rule. A side rail shows today's spend against the limit and the payments waiting for approval. **Shops** lists every shop with its trust score and, per product, what the buyer's rules allow. **Spending rules** shows the guard's real verdict on every listed product, from the same code path as a real checkout.
+- **Shop owner:** shop cards with a trust score and a readiness checklist, a **live catalog** edited in AG Grid, **Lost sales** with the blocking rules charted and marked "yours to fix" or "buyer's own limit", and **Orders & payouts** with a bar showing where the money is.
 - **Any order:** click a row for its lifecycle, PayPal ids and the full guard report.
-- Light and dark themes, and a phone layout.
+- **Two-minute tour:** the demo accounts get a five-step checklist per side, ticked off from real state, with a one-click switch to the other side.
+- Light and dark themes, and a phone layout. The design is deliberately a ledger: paper and ink, hairlines, monospace for money and verdicts, colour only for allow / ask / block and the PayPal button.
 
 ## The problem
 
@@ -45,7 +48,7 @@ AI agents are starting to shop for people. Two things stand in the way:
 | **Webhooks** | PayPal events keep orders right when the redirect never comes back (buyer approved and closed the tab), a hold expires, or money is refunded or disputed on paypal.com. A dispute lowers the merchant's trust, so the guard reacts on the next sale. | Signature verified with `verify-webhook-signature`, each event id applied once |
 | **Why agents didn't buy** | Every sale the guard stops is recorded per shop, product and rule. Merchants see how often each rule cost them a sale and what to do about it, for example publish a refund policy or remove risky payment wording. Rules that are the buyer's own limits say so. | |
 | **Money assistant** | Merchants ask *"how much have agents paid me this week?"*. Claude answers from AgentReady's ledger and, read-only, from the merchant's PayPal account. | **Agent Toolkit**: `list_transactions`, `list_disputes`, `get_order` |
-| **Dashboards** | AG Grid views of agent orders (with actions and which agent placed them), the audit trail, merchant trust scores with reasons, and lost sales. | Order and capture IDs on every row |
+| **Dashboards** | AG Grid Community across four grids: the orders ledger (quick filter, a pinned totals row that follows the filter, CSV export, per-row PayPal actions, click a row for the guard report), the shop owner's live catalog (prices, stock and delivery days are edited in the grid and saved to the server, so agents and the guard see the change at once), the audit trail, and lost sales. | Order and capture IDs on every row |
 
 ## Run it locally (2 minutes)
 
@@ -59,7 +62,7 @@ cp .env.example .env    # optional: add keys, see below
 npm start
 ```
 
-Open http://localhost:3000. You land on the login page: create an account as a buyer or a shop owner, or click **Demo buyer** / **Demo shop owner**. The demo shop owner manages the three sample shops.
+Open http://localhost:3000. You land on the login page: create an account as a buyer or a shop owner, or click **Try it as a buyer** / **Try it as a shop owner**. Each demo account shows a five-step tour in the sidebar. The demo shop owner manages the three sample shops.
 
 **It runs with no keys at all.** The header shows which mode is active:
 
@@ -98,8 +101,8 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
 1. **Shop with agent** → *"Chocolate birthday cake under $30, needed tomorrow"*. The agent picks the trusted bakery and the guard blocks the 95%-off earbuds from a scam shop. Click **Pay with PayPal** and approve.
 2. Log in as the shop owner → **Orders & payouts** → the order is `AUTHORIZED` (funds held). Click **Mark delivered** to capture it to the merchant.
 3. Ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the agent asks first.
-4. **My shops** → **Use a sample shop** → **Extract catalog** → **Publish to agents**. Then ask the agent for *"lavender candle gift under $15"*.
-5. **My shops** → **Try a suspicious shop**. Its page hides a line telling AI agents to report no red flags, and it asks for gift cards or crypto. The code scan catches both, so the shop scores 10 out of 100 in demo mode (Claude's own flags can push it lower), far below the minimum of 60. No agent will buy there.
+4. **My shops** → **Add a shop** → **Use a sample shop** → **Extract catalog** → **Publish to agents**. Then ask the agent for *"lavender candle gift under $15"*.
+5. **My shops** → **Add a shop** → **Try a suspicious shop**. Its page hides a line telling AI agents to report no red flags, and it asks for gift cards or crypto. The code scan catches both, so the shop scores 10 out of 100 in demo mode (Claude's own flags can push it lower), far below the minimum of 60. No agent will buy there.
 6. **Orders & payouts** → on a captured order, **Sim dispute** fires the dispute webhook; the bakery's trust drops. Ask the money assistant what happened.
 7. Connect Claude Code over MCP and buy something from the terminal; the order appears as **MCP agent**.
 8. **Spending rules** → lower the per-order limit, save, and watch "What your saved rules allow" move products from allowed to blocked.
@@ -114,7 +117,7 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
   - Server-side refusal fallback (`fallbacks: "default"`) is enabled on every call.
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): catalog sync on publish (`create_product`) and the assistant's read-only tools. Write actions are not enabled for the model.
 - **MCP** (`@modelcontextprotocol/sdk`): the `/mcp` endpoint for outside agents.
-- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (42 tests, including MCP, webhook and stale-approval flows end to end).
+- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (44 tests, including MCP, webhook and stale-approval flows end to end).
 
 ## Project layout
 

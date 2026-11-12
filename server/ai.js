@@ -97,7 +97,8 @@ export async function extractCatalog(rawText) {
   }
 }
 
-function extractCatalogRules(rawText) {
+/** Rule-based extraction: no model call, so it is safe to expose publicly. */
+export function extractCatalogRules(rawText) {
   const lines = rawText.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   const priceRe = /(?:₹|rs\.?|inr|\$|usd)\s*([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*(?:₹|rs|inr|\$|usd)/i;
   const products = [];

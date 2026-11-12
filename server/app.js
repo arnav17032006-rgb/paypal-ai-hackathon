@@ -185,6 +185,27 @@ app.get("/api/agent-feed", (req, res) => {
 
 mcp.mount(app);
 
+// The landing page's live scanner: anyone can paste shop text and see what the guard's code scan finds.
+// It never calls a model and stores nothing, and each address gets a small budget per minute.
+const scanHits = new Map();
+app.post("/api/public/scan", (req, res) => {
+  const now = Date.now();
+  const hits = (scanHits.get(req.ip) || []).filter((t) => now - t < 60_000);
+  if (hits.length >= 30) return res.status(429).json({ error: "Too many scans. Try again in a minute." });
+  scanHits.set(req.ip, [...hits, now]);
+  if (scanHits.size > 5000) scanHits.clear();
+  const text = String(req.body?.text || "").slice(0, 8000);
+  if (!text.trim()) return res.status(400).json({ error: "Paste some shop text to scan" });
+  const catalog = ai.extractCatalogRules(text);
+  const trust = guard.scoreNewMerchant({ ...catalog, paypalEmail: "", aiRedFlags: [], sourceText: text });
+  res.json({
+    name: catalog.name,
+    products: catalog.products.slice(0, 8).map(({ name, price }) => ({ name, price })),
+    score: trust.score, level: trust.level, reasons: trust.reasons, flags: trust.flags,
+    minimum: store.data().mandate.minMerchantTrust,
+  });
+});
+
 // ---------------------------------------------------------------- merchant onboarding
 
 function htmlToText(html) {
@@ -365,6 +386,27 @@ app.get("/paypal/cancel", (req, res) => {
 app.post("/api/orders/:id/fulfil", owner, wrap(async (req, res) => res.json(await orders.capture(findOrder(req)))));
 app.post("/api/orders/:id/void", owner, wrap(async (req, res) => res.json(await orders.release(findOrder(req)))));
 app.post("/api/orders/:id/refund", owner, wrap(async (req, res) => res.json(await orders.refund(findOrder(req), req.body?.note))));
+
+// A shop owner edits their live catalog in the grid. Agents and the guard read the new values on their next call.
+app.patch("/api/products/:id", owner, (req, res) => {
+  const found = store.product(req.params.id);
+  if (!found || !store.shopsOf(req.user).includes(found.merchant.id)) return res.status(404).json({ error: "Product not found" });
+  const p = found.product;
+  const changes = [];
+  const set = (key, value, ok, label) => {
+    if (req.body[key] === undefined) return true;
+    if (!Number.isFinite(value) || !ok(value)) return false;
+    if (p[key] !== value) { changes.push(`${label} ${p[key]} → ${value}`); p[key] = value; }
+    return true;
+  };
+  const valid =
+    set("price", +Number(req.body.price).toFixed(2), (v) => v >= 0.01 && v <= 100_000, "price") &&
+    set("stock", Math.trunc(Number(req.body.stock)), (v) => v >= 0 && v <= 100_000, "stock") &&
+    set("deliveryDays", Math.trunc(Number(req.body.deliveryDays)), (v) => v >= 0 && v <= 365, "delivery days");
+  if (!valid) return res.status(400).json({ error: "Enter a sensible number" });
+  if (changes.length) store.log("merchant", `${found.merchant.name} updated ${p.name}: ${changes.join(", ")}`, { merchantId: found.merchant.id });
+  res.json(p);
+});
 
 // ---------------------------------------------------------------- webhooks + money assistant
 
