@@ -75,7 +75,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 #### How we built it
 
 - **Server:** Node.js and Express 5, with a JSON file store. **Front end:** vanilla JavaScript with AG Grid Community.
-- **Claude (`claude-opus-5-5`)** through the official Anthropic SDK:
+- **The model.** The live demo runs **Google Gemini** (`gemini-2.5-flash`, with automatic fallback to other Gemini models when one is busy) through its OpenAI-compatible chat API with tool calling. The same code runs **Claude (`claude-opus-5-5`)** through the Anthropic SDK when an Anthropic key is set; the prompts, tools and guard are identical. If the model fails mid-run, a rule-based shopper finishes under the same guard. What the model does:
   - catalog extraction with a strict-schema tool (effort `low`)
   - the shopper agent as a manual tool-use loop over `search_products`, `check_purchase` and `checkout` (effort `medium`)
   - the money assistant over the ledger plus read-only PayPal tools (effort `low`)
@@ -158,7 +158,7 @@ This step only opens after Step 1 is saved, so its exact questions aren't known 
   - Orders v2: create with `AUTHORIZE`, then authorize, capture, void and refund.
   - OAuth, webhooks with signature verification, and the PayPal Agent Toolkit.
   - All on the sandbox.
-- **Which AI tools did you use?** Claude (`claude-opus-5-5`) through the Anthropic SDK, and MCP.
+- **Which AI tools did you use?** Google Gemini (`gemini-2.5-flash`) on the live demo for the shopper agent, catalog extraction and money assistant, all with tool calling; the same agents run on Claude (`claude-opus-5-5`) through the Anthropic SDK when that key is set. MCP for outside agents. Built with Claude Code.
 - **Sponsor tools:** AG Grid Community across four grids: the orders ledger (quick filter, a pinned totals row that follows the filter, CSV export, per-row PayPal actions, click a row for the guard report), the shop owner's live catalog (prices, stock and delivery days are edited in the grid and saved to the server, so agents and the guard see the change at once), the audit trail, and lost sales. Render hosts the live demo from `render.yaml` with a health check.
 - **New or existing project?** New. Built during the submission period.
 - **Prizes to opt into:** Best Use of AG Grid, and Best Use of Render once it's deployed there.
