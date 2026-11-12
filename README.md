@@ -6,6 +6,8 @@
 
 Built for the [PayPal AI Hackathon 2026](https://paypalaihackathon.devpost.com/).
 
+**Live demo:** https://agentready-6odi.onrender.com (click **Try as demo buyer** or **Try as demo shop owner**; the free instance can take about a minute to wake up)
+
 | | |
 |---|---|
 | ![The agent picks a trusted bakery and the guard blocks a scam shop](docs/screenshots/1-agent-run.jpg) | ![A shop with a hidden instruction for AI agents scores 10 out of 100](docs/screenshots/2-suspicious-shop.jpg) |

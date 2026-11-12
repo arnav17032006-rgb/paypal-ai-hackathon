@@ -126,7 +126,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 ### "Try it out" links
 
 - GitHub: https://github.com/arnav17032006-rgb/paypal-ai-hackathon
-- Live demo: **[Render URL after deploying]**
+- Live demo: https://agentready-6odi.onrender.com
 
 ### Video demo link
 
@@ -163,7 +163,7 @@ This step only opens after Step 1 is saved, so its exact questions aren't known 
 
 ## Testing instructions for judges
 
-**Hosted:** **[Render URL]**. To approve a payment, use this PayPal **sandbox** buyer account (a test account with fake money): **[sandbox personal account email]** / **[its password]**.
+**Hosted:** https://agentready-6odi.onrender.com (the free instance can take about a minute to wake up). To approve a payment, use this PayPal **sandbox** buyer account (a test account with fake money): **[sandbox personal account email]** / **[its password]**.
 
 **Locally** (Node.js 22 or newer):
 
