@@ -149,3 +149,20 @@ test("an outside agent with a buyer's key shops under that buyer's account", asy
   const bad = await fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", Authorization: "Bearer nope" }, body: "{}" });
   assert.equal(bad.status, 401);
 });
+
+test("a buyer's state says what their rules allow, product by product, and follows rule changes", async () => {
+  const buyer = await signup("buyer");
+  const before = (await call("GET", "/api/state", null, buyer.cookie)).body.coverage;
+  const of = (rows, id) => rows.find((r) => r.productId === id);
+  assert.equal(of(before, "p_choc_cake").decision, "allow");
+  assert.equal(of(before, "p_ds_book").decision, "ask"); // $42 is above the $35 ask-me threshold
+  const fake = of(before, "p_airpods_fake");
+  assert.equal(fake.decision, "block");
+  assert.ok(fake.reasons.some((r) => r.rule === "merchant_trust"));
+  await call("PUT", "/api/mandate", { perOrderLimit: 10 }, buyer.cookie);
+  const after = (await call("GET", "/api/state", null, buyer.cookie)).body.coverage;
+  assert.equal(of(after, "p_choc_cake").decision, "block");
+  // Shop owners get no buyer coverage.
+  const owner = await signup("merchant");
+  assert.equal((await call("GET", "/api/state", null, owner.cookie)).body.coverage, undefined);
+});

@@ -110,6 +110,20 @@ app.get("/api/health", (req, res) => res.json({ ok: true, modes: { ai: ai.aiMode
 const ownsAsBuyer = (u, o) => u.role === "buyer" && store.buyerOf(o) === u.id;
 const ownsAsMerchant = (u, o) => u.role === "merchant" && store.shopsOf(u).includes(o.merchantId);
 
+/**
+ * What a buyer's current rules allow: the guard's verdict on one unit of every listed product.
+ * It is the same code path as a real checkout, so the screen can never promise more than the guard will do.
+ */
+function coverageFor(buyerId) {
+  return store.data().merchants.flatMap((m) => m.products.map((p) => {
+    const v = guard.evaluate({ productId: p.id, quantity: 1, buyerId });
+    return {
+      productId: p.id, merchantId: m.id, decision: v.decision,
+      reasons: v.checks.filter((c) => c.severity !== "pass").map(({ rule, severity, detail }) => ({ rule, severity, detail })),
+    };
+  }));
+}
+
 /** Each person sees only their side: a buyer their own orders and rules, a shop owner their own shops. */
 app.get("/api/state", auth.requireUser, (req, res) => {
   const d = store.data();
@@ -121,7 +135,7 @@ app.get("/api/state", auth.requireUser, (req, res) => {
     const events = d.events.filter((e) => e.buyerId === u.id || (orderOf(e) && ownsAsBuyer(u, orderOf(e))));
     return res.json({
       user: auth.publicUser(u), modes, mandate: store.mandateFor(u.id), spentToday: store.spentToday(undefined, u.id),
-      merchants: d.merchants, orders, events: events.slice(0, 100), lostSales: [],
+      merchants: d.merchants, orders, events: events.slice(0, 100), lostSales: [], coverage: coverageFor(u.id),
     });
   }
   const shops = store.shopsOf(u);

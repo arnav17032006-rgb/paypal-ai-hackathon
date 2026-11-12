@@ -4,56 +4,79 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Log in · AgentReady</title>
+  <script>
+    (function () {
+      var t; try { t = localStorage.getItem("theme"); } catch (e) {}
+      document.documentElement.dataset.theme = t || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="auth-page">
+  <section class="hero">
+    <div class="brand"><span class="brand-mark" data-icon="shield"></span><span>AgentReady<small>Safe agent payments</small></span></div>
+    <h1>Let AI shop for you. <em>Safely.</em></h1>
+    <p class="hero-lead">AgentReady makes any small shop buyable by AI agents, and puts a trust guard between every agent and your money.</p>
+    <ul class="feats">
+      <li><span data-icon="shield"></span><div><b>A guard the AI can't override</b><span>Plain code checks your limits, shop trust and scam signals at checkout, at approval and before money is held.</span></div></li>
+      <li><span data-icon="lock"></span><div><b>PayPal holds the money until delivery</b><span>You approve on PayPal. Funds are authorized, captured only when the shop delivers, and refundable.</span></div></li>
+      <li><span data-icon="store"></span><div><b>Any shop, agent-ready in a minute</b><span>Paste an Instagram caption or a price list. AI builds the catalog and shows why agents didn't buy.</span></div></li>
+    </ul>
+    <div class="flowline">
+      <span>Agent finds it</span><i data-icon="arrow"></i><span>Guard checks it</span><i data-icon="arrow"></i><span>You approve on PayPal</span><i data-icon="arrow"></i><span>Held</span><i data-icon="arrow"></i><span>Delivered, then paid</span>
+    </div>
+    <p class="hero-foot">Works with outside assistants too: any MCP client can shop through the same guard.</p>
+  </section>
+
   <main class="auth">
-    <div class="brand auth-brand"><span class="logo">◆</span> AgentReady <small>safe agent payments on PayPal</small></div>
+    <h2 id="auth-title">Welcome back</h2>
+    <p class="muted" id="auth-sub">Log in to your buyer or shop-owner account.</p>
 
-    <div class="card">
-      <div class="auth-tabs" role="tablist">
-        <button type="button" role="tab" data-mode="login" class="active" aria-selected="true">Log in</button>
-        <button type="button" role="tab" data-mode="signup" aria-selected="false">Create account</button>
-      </div>
-
-      <form id="auth-form" novalidate>
-        <fieldset class="role-pick">
-          <legend id="role-legend">Log in as</legend>
-          <label class="role-card">
-            <input type="radio" name="role" value="buyer" checked />
-            <span><b>Buyer</b><small>Tell an AI agent what to buy, set spending rules, approve payments on PayPal.</small></span>
-          </label>
-          <label class="role-card">
-            <input type="radio" name="role" value="merchant" />
-            <span><b>Shop owner</b><small>Make your shop buyable by AI agents, fulfil orders and get paid through PayPal.</small></span>
-          </label>
-        </fieldset>
-
-        <div id="name-row" hidden>
-          <label for="name">Your name</label>
-          <input id="name" name="name" autocomplete="name" maxlength="60" />
-        </div>
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" autocomplete="email" required />
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required />
-        <p class="muted" id="pw-hint" hidden>At least 8 characters.</p>
-
-        <p class="auth-error" id="auth-error" role="alert" hidden></p>
-        <button class="primary auth-submit" id="auth-submit" type="submit">Log in</button>
-      </form>
+    <div class="auth-tabs" role="tablist">
+      <button type="button" role="tab" data-mode="login" class="active" aria-selected="true">Log in</button>
+      <button type="button" role="tab" data-mode="signup" aria-selected="false">Create account</button>
     </div>
 
-    <div class="card demo-card">
-      <h3>Just looking? Try a demo account</h3>
-      <p class="muted">No sign-up needed. The demo shop owner manages the three sample shops.</p>
-      <div class="row">
-        <button type="button" class="demo-btn" data-role="buyer">Try as demo buyer</button>
-        <button type="button" class="demo-btn" data-role="merchant">Try as demo shop owner</button>
+    <form id="auth-form" novalidate>
+      <fieldset class="role-pick">
+        <legend id="role-legend">Log in as</legend>
+        <label class="role-card">
+          <input type="radio" name="role" value="buyer" checked />
+          <span data-icon="user"></span>
+          <b>Buyer</b><small>Tell an AI agent what to buy, set spending rules, approve on PayPal.</small>
+        </label>
+        <label class="role-card">
+          <input type="radio" name="role" value="merchant" />
+          <span data-icon="store"></span>
+          <b>Shop owner</b><small>Make your shop buyable by AI agents and get paid through PayPal.</small>
+        </label>
+      </fieldset>
+
+      <div id="name-row" hidden>
+        <label for="name">Your name</label>
+        <input id="name" name="name" autocomplete="name" maxlength="60" />
       </div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+      <p class="muted" id="pw-hint" hidden>At least 8 characters.</p>
+
+      <p class="auth-error" id="auth-error" role="alert" hidden></p>
+      <button class="primary auth-submit" id="auth-submit" type="submit">Log in</button>
+    </form>
+
+    <div class="or">or try it without signing up</div>
+    <div class="demo-row">
+      <button type="button" class="demo-btn" data-role="buyer"><span data-icon="sparkles"></span><span>Demo buyer<small>Shop with an agent</small></span></button>
+      <button type="button" class="demo-btn" data-role="merchant"><span data-icon="store"></span><span>Demo shop owner<small>Manage three sample shops</small></span></button>
     </div>
   </main>
 
+  <script src="/icons.js"></script>
   <script>
     const $ = (s) => document.querySelector(s);
     let mode = "login";
@@ -71,6 +94,8 @@
       $("#role-legend").textContent = signup ? "I am a" : "Log in as";
       $("#password").autocomplete = signup ? "new-password" : "current-password";
       $("#auth-submit").textContent = signup ? "Create account" : "Log in";
+      $("#auth-title").textContent = signup ? "Create your account" : "Welcome back";
+      $("#auth-sub").textContent = signup ? "Free. Pick the side you want to use." : "Log in to your buyer or shop-owner account.";
       $("#auth-error").hidden = true;
     }
     document.querySelectorAll(".auth-tabs button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));

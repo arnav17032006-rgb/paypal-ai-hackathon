@@ -6,14 +6,23 @@
 
 Built for the [PayPal AI Hackathon 2026](https://paypalaihackathon.devpost.com/).
 
-**Live demo:** https://agentready-6odi.onrender.com (click **Try as demo buyer** or **Try as demo shop owner**; the free instance can take about a minute to wake up)
+**Live demo:** https://agentready-6odi.onrender.com (click **Demo buyer** or **Demo shop owner**; the free instance can take about a minute to wake up)
 
 | | |
 |---|---|
 | ![The agent picks a trusted bakery and the guard blocks a scam shop](docs/screenshots/1-agent-run.jpg) | ![A shop with a hidden instruction for AI agents scores 10 out of 100](docs/screenshots/2-suspicious-shop.jpg) |
 | ![Merchants see which rule stopped each sale and what to do](docs/screenshots/3-why-agents-didnt-buy.jpg) | ![Orders, holds and captures in AG Grid](docs/screenshots/4-orders-ledger.jpg) |
+| ![Every shop with its trust score and what the buyer's rules allow](docs/screenshots/6-agent-ready-shops.jpg) | ![One order: where it is, PayPal ids and the full guard report](docs/screenshots/7-order-guard-report.jpg) |
+| ![Spending rules with the guard's live verdict on every product](docs/screenshots/8-spending-rules.jpg) | ![Login page with one-click demo accounts](docs/screenshots/5-login.jpg) |
 
 Screenshots are from demo mode (no keys).
+
+## What you see
+
+- **Buyer:** a goal box for the agent, a step-by-step run (search, each guard check, checkout), the guardrails with today's spend, and an inbox of payments waiting for approval. **Agent-ready shops** lists every shop with its trust score and, per product, what the buyer's rules allow. **Spending rules** shows the guard's real verdict on every listed product ("agent can buy", "asks you first", "blocked"), from the same code path as a real checkout.
+- **Shop owner:** shop cards with a trust gauge and an agent-readiness checklist, **Why agents didn't buy** with the blocking rules as a chart, and **Orders & payouts** with a bar showing where the money is (waiting, held, paid, refunded).
+- **Any order:** click a row for its lifecycle, PayPal ids and the full guard report.
+- Light and dark themes, and a phone layout.
 
 ## The problem
 
@@ -50,7 +59,7 @@ cp .env.example .env    # optional: add keys, see below
 npm start
 ```
 
-Open http://localhost:3000. You land on the login page: create an account as a buyer or a shop owner, or click **Try as demo buyer** / **Try as demo shop owner**. The demo shop owner manages the three sample shops.
+Open http://localhost:3000. You land on the login page: create an account as a buyer or a shop owner, or click **Demo buyer** / **Demo shop owner**. The demo shop owner manages the three sample shops.
 
 **It runs with no keys at all.** The header shows which mode is active:
 
@@ -87,13 +96,13 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
 ## Demo script
 
 1. **Shop with agent** → *"Chocolate birthday cake under $30, needed tomorrow"*. The agent picks the trusted bakery and the guard blocks the 95%-off earbuds from a scam shop. Click **Pay with PayPal** and approve.
-2. **Orders & ledger** → the order is `AUTHORIZED` (funds held). Click **Mark delivered** to capture it to the merchant.
+2. Log in as the shop owner → **Orders & payouts** → the order is `AUTHORIZED` (funds held). Click **Mark delivered** to capture it to the merchant.
 3. Ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the agent asks first.
-4. **Become agent-ready** → **Use a sample** → **Extract catalog** → **Publish to agents**. Then ask the agent for *"lavender candle gift under $15"*.
-5. **Become agent-ready** → **Try a suspicious shop**. Its page hides a line telling AI agents to report no red flags, and it asks for gift cards or crypto. The code scan catches both, so the shop scores 10 out of 100 in demo mode (Claude's own flags can push it lower), far below the minimum of 60. No agent will buy there.
-6. **Orders & ledger** → on a captured order, **Sim dispute** fires the dispute webhook; the bakery's trust drops. Ask the money assistant what happened.
+4. **My shops** → **Use a sample shop** → **Extract catalog** → **Publish to agents**. Then ask the agent for *"lavender candle gift under $15"*.
+5. **My shops** → **Try a suspicious shop**. Its page hides a line telling AI agents to report no red flags, and it asks for gift cards or crypto. The code scan catches both, so the shop scores 10 out of 100 in demo mode (Claude's own flags can push it lower), far below the minimum of 60. No agent will buy there.
+6. **Orders & payouts** → on a captured order, **Sim dispute** fires the dispute webhook; the bakery's trust drops. Ask the money assistant what happened.
 7. Connect Claude Code over MCP and buy something from the terminal; the order appears as **MCP agent**.
-8. **Mandate** → lower the per-order limit and watch the guard block what it allowed before.
+8. **Spending rules** → lower the per-order limit, save, and watch "What your saved rules allow" move products from allowed to blocked.
 
 ## How AI is used
 
@@ -105,7 +114,7 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
   - Server-side refusal fallback (`fallbacks: "default"`) is enabled on every call.
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): catalog sync on publish (`create_product`) and the assistant's read-only tools. Write actions are not enabled for the model.
 - **MCP** (`@modelcontextprotocol/sdk`): the `/mcp` endpoint for outside agents.
-- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (41 tests, including MCP, webhook and stale-approval flows end to end).
+- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (42 tests, including MCP, webhook and stale-approval flows end to end).
 
 ## Project layout
 
@@ -122,7 +131,7 @@ server/ai.js       Claude catalog extraction, shopper agent and money assistant,
 server/guard.js    Trust guard, red-flag scan and merchant trust scoring
 server/store.js    JSON file store (data/db.json)
 server/seed.json   Demo mandate and merchants
-public/            Web app (vanilla JS + AG Grid Community) and the login page
+public/            Web app (vanilla JS + AG Grid Community, no build step), the login page and the shared icon set
 test/              Guard, trust, accounts and end-to-end API tests (npm test)
 .github/workflows/ CI: the tests on Node 22 and 24, plus a start-up check, on every push
 DEVPOST_SUBMISSION.md  Hackathon write-up, testing steps for judges and the video script
