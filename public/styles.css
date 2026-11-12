@@ -169,7 +169,7 @@ pre.cmd { background: #0b1326; color: #cfe0ff; border-radius: 10px; padding: 12p
 .kpi span { color: var(--muted); font-size: 12.5px; }
 
 /* ---------------------------------------------------------------- agent composer + run */
-.composer { background: linear-gradient(135deg, #003087 0%, #0057d9 55%, #2b8bff 100%); color: #fff; border: 0; position: relative; overflow: hidden; }
+.composer { background: linear-gradient(135deg, #003087 0%, #0057d9 55%, #2b8bff 100%); color: #fff; border: 0; position: relative; overflow: hidden; overflow: clip; /* clip, so focusing the text box can't scroll the card sideways to the glow */ }
 .composer::after { content: ""; position: absolute; right: -80px; top: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 196, 57, .35), transparent 65%); pointer-events: none; }
 .composer h2 { font-size: 22px; }
 .composer .muted { color: rgba(255, 255, 255, .82); }
