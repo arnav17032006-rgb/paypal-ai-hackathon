@@ -6,6 +6,8 @@ const words = (s) => String(s ?? "").replace(/_/g, " ");
 const badge = (v) => `<span class="badge ${esc(v)}">${esc(words(v))}</span>`;
 const sum = (rows) => rows.reduce((s, x) => s + x.amount, 0);
 const pad2 = (n) => String(n).padStart(2, "0");
+const ENGINES = { claude: "Claude", gemini: "Gemini", groq: "Llama on Groq", llm: "LLM", rules: "rule-based fallback" };
+const engineName = (e) => ENGINES[e] || e || "";
 let state = null;
 let pendingCatalog = null;
 
@@ -264,7 +266,7 @@ function openOrder(o) {
     <h4>What the agent was asked</h4>
     <div class="kv">
       ${kv("Goal", esc(o.goal))}${kv("Agent's reason", esc(o.reason))}
-      ${kv("Agent", esc(o.channel || "web agent") + (o.engine ? ` (${o.engine === "claude" ? "Claude" : "rule-based"})` : ""))}
+      ${kv("Agent", esc(o.channel || "web agent") + (o.engine ? ` (${engineName(o.engine)})` : ""))}
       ${kv("Created", new Date(o.createdAt).toLocaleString())}
     </div>
     <h4>PayPal</h4>
@@ -295,7 +297,7 @@ function renderModes() {
   const { ai, paypal, webhooks, toolkit } = state.modes;
   const row = (label, value, live, title) => `<div class="sys-row" title="${esc(title)}"><span class="dot ${live ? "live" : "demo"}"></span>${label}<b>${esc(value)}</b></div>`;
   $("#modes").innerHTML =
-    row("AI", ai === "claude" ? "claude" : "rules", ai === "claude", "Set ANTHROPIC_API_KEY to use Claude") +
+    row("AI", ai, ai !== "rules", "Set ANTHROPIC_API_KEY for Claude, or GEMINI_API_KEY / GROQ_API_KEY for another model") +
     row("PayPal", paypal === "sandbox" ? "sandbox" : "simulator", paypal === "sandbox", "Set PAYPAL_CLIENT_ID/SECRET to use the PayPal sandbox") +
     row("Webhooks", webhooks === "verified" ? "verified" : words(webhooks), webhooks === "verified", "Set PAYPAL_WEBHOOK_ID to accept signature-verified PayPal webhooks") +
     row("MCP", "on", true, "Any MCP client can shop at /mcp");
@@ -625,7 +627,7 @@ function describeStep(t, checks) {
 
 function renderRun(r) {
   const steps = r.trace.filter((t) => t.kind === "tool" || (t.kind === "say" && t.text !== r.message)).map((t) => describeStep(t, r.checks));
-  let html = `<div class="card"><div class="card-head"><h3>What the agent did</h3><span class="eyebrow">${r.engine === "claude" ? "Claude" : "rule-based fallback"} · ${steps.length} steps</span></div>`;
+  let html = `<div class="card"><div class="card-head"><h3>What the agent did</h3><span class="eyebrow">${engineName(r.engine)} · ${steps.length} steps</span></div>`;
   if (r.error) html += `<p class="flags">${esc(r.error)}</p>`;
   html += `<ol class="log">${steps.map((s, i) => `<li style="animation-delay:${i * 110}ms"><span class="log-n">${pad2(i + 1)}</span><span class="log-k">${s.kind}</span><div class="log-b">${s.title}${s.sub ? `<small>${s.sub}</small>` : ""}</div><span class="small muted">${s.right || ""}</span></li>`).join("")}</ol>`;
   if (r.message) html += `<div class="agent-msg"><span class="eyebrow">Agent</span>${esc(r.message)}</div>`;
@@ -699,7 +701,7 @@ function renderCatalog(r) {
   ];
   $("#onboard-result").innerHTML = `<div class="card">
     <div class="shop-head">
-      <div><span class="eyebrow">${c.engine === "claude" ? "Extracted by Claude" : "Rule-based extraction"}</span><h3 style="font-size:20px;margin-top:4px">${esc(c.name)}</h3></div>
+      <div><span class="eyebrow">${c.engine === "rules" ? "Rule-based extraction" : `Extracted by ${engineName(c.engine)}`}</span><h3 style="font-size:20px;margin-top:4px">${esc(c.name)}</h3></div>
       ${trustBlock(t)}</div>${notes}
     <div class="verdict-line ${ok ? "allow" : "block"}"><b>${ok ? "Agents can buy from this shop." : `Trust ${t.score} is below the default buyer minimum of ${min}, so most agents will not buy here.`}</b></div>
     ${found.length ? `<ul class="found">${found.map(([k, v]) => `<li><span>${k}</span><span>${esc(v)}</span></li>`).join("")}</ul>` : ""}
@@ -738,7 +740,7 @@ $("#assistant-form").addEventListener("submit", async (e) => {
   btn.disabled = true;
   try {
     const r = await api("POST", "/api/assistant", { question });
-    $("#assistant-answer").innerHTML = `<div class="answer">${esc(r.error || r.answer)}<small>Sources: ${esc(r.sources.join(", ") || "none")} · ${r.engine === "claude" ? "Claude" : "rule-based"}</small></div>`;
+    $("#assistant-answer").innerHTML = `<div class="answer">${esc(r.error || r.answer)}<small>Sources: ${esc(r.sources.join(", ") || "none")} · ${engineName(r.engine)}</small></div>`;
     seen.set("assistant");
   } catch (err) { toast(err.message); } finally { btn.disabled = false; }
 });

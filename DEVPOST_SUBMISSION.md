@@ -75,7 +75,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 #### How we built it
 
 - **Server:** Node.js and Express 5, with a JSON file store. **Front end:** vanilla JavaScript with AG Grid Community.
-- **Claude (`claude-opus-5-5`)** through the official Anthropic SDK:
+- **The model.** The live demo runs **Google Gemini** (`gemini-2.5-flash`, with automatic fallback to other Gemini models when one is busy) through its OpenAI-compatible chat API with tool calling. The same code runs **Claude (`claude-opus-5-5`)** through the Anthropic SDK when an Anthropic key is set; the prompts, tools and guard are identical. If the model fails mid-run, a rule-based shopper finishes under the same guard. What the model does:
   - catalog extraction with a strict-schema tool (effort `low`)
   - the shopper agent as a manual tool-use loop over `search_products`, `check_purchase` and `checkout` (effort `medium`)
   - the money assistant over the ledger plus read-only PayPal tools (effort `low`)
@@ -87,7 +87,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
   - Webhooks checked with `verify-webhook-signature` against the exact raw request body, and each event applied once.
 - **PayPal Agent Toolkit:** `create_product` when a merchant publishes, and read-only transaction, dispute, order, product and invoice tools for the money assistant. Write actions are never given to the model.
 - **MCP:** the official TypeScript SDK, as a stateless Streamable HTTP endpoint.
-- **Tests:** 44 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
+- **Tests:** 45 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
 - **Deploy:** a Render Blueprint (`render.yaml`) with a health check.
 - **No keys needed to try it.** Without keys, a rule-based extractor and shopper stand in for Claude, and a local simulator that returns PayPal's response shapes stands in for the sandbox. The header shows which mode is active.
 
@@ -104,7 +104,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 - No money moves without a person approving it on PayPal, and no agent, prompt or shop page can change the owner's rules.
 - Any MCP agent, not just ours, can shop AgentReady stores under the same guard.
 - The full authorize, capture, void, refund and dispute cycle, with webhooks and idempotency keys.
-- 44 automated tests, including stale approvals, parallel checkouts and webhook retries.
+- 45 automated tests, including stale approvals, parallel checkouts and webhook retries.
 - It runs with zero setup, and switches to Claude and the real PayPal sandbox as soon as keys are added.
 
 #### What we learned
@@ -158,7 +158,7 @@ This step only opens after Step 1 is saved, so its exact questions aren't known 
   - Orders v2: create with `AUTHORIZE`, then authorize, capture, void and refund.
   - OAuth, webhooks with signature verification, and the PayPal Agent Toolkit.
   - All on the sandbox.
-- **Which AI tools did you use?** Claude (`claude-opus-5-5`) through the Anthropic SDK, and MCP.
+- **Which AI tools did you use?** Google Gemini (`gemini-2.5-flash`) on the live demo for the shopper agent, catalog extraction and money assistant, all with tool calling; the same agents run on Claude (`claude-opus-5-5`) through the Anthropic SDK when that key is set. MCP for outside agents. Built with Claude Code.
 - **Sponsor tools:** AG Grid Community across four grids: the orders ledger (quick filter, a pinned totals row that follows the filter, CSV export, per-row PayPal actions, click a row for the guard report), the shop owner's live catalog (prices, stock and delivery days are edited in the grid and saved to the server, so agents and the guard see the change at once), the audit trail, and lost sales. Render hosts the live demo from `render.yaml` with a health check.
 - **New or existing project?** New. Built during the submission period.
 - **Prizes to opt into:** Best Use of AG Grid, and Best Use of Render once it's deployed there.
@@ -190,7 +190,7 @@ Open http://localhost:3000. It runs without any keys, using the PayPal simulator
 6. Back as the buyer, ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the order waits for your OK.
 7. Connect your own agent with the command shown on the buyer's **Shop with agent** tab, then ask it to buy something.
 
-`npm test` runs all 44 tests.
+`npm test` runs all 45 tests.
 
 ---
 

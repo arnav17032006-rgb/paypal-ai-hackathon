@@ -69,6 +69,7 @@ Open http://localhost:3000. You land on the login page: create an account as a b
 | Setting | Without it | With it |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Rule-based extraction and shopper (keyword search + the same guard) | Claude (`claude-opus-5-5`) extracts catalogs and runs the shopper agent with tools |
+| `GEMINI_API_KEY` (or `GROQ_API_KEY`, or `LLM_API_KEY` + `LLM_BASE_URL` + `LLM_MODEL`) | Used only when there is no Anthropic key | The same three agents run on that model through its OpenAI-compatible chat API with tool calling. The guard, the prompts and the tools are identical; the UI names the engine that answered |
 | `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` | A local simulator with PayPal's response shapes and an approval page | The real PayPal **sandbox**; you approve with a sandbox buyer account. Also turns on the Agent Toolkit (catalog sync, money assistant reads PayPal) |
 | `PAYPAL_WEBHOOK_ID` | Webhooks are refused (simulated events can be fired from the Orders grid in demo mode) | Signature-verified PayPal webhooks at `/api/webhooks/paypal` |
 
@@ -117,7 +118,7 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
   - Server-side refusal fallback (`fallbacks: "default"`) is enabled on every call.
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): catalog sync on publish (`create_product`) and the assistant's read-only tools. Write actions are not enabled for the model.
 - **MCP** (`@modelcontextprotocol/sdk`): the `/mcp` endpoint for outside agents.
-- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (44 tests, including MCP, webhook and stale-approval flows end to end).
+- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (45 tests, including MCP, webhook and stale-approval flows end to end).
 
 ## Project layout
 
