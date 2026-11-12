@@ -121,11 +121,11 @@
         <tr><td>PayPal Orders v2</td><td>Authorize on approval, capture on delivery, void to release, refund after capture. Payee set per shop so money goes to the merchant.</td></tr>
         <tr><td>PayPal webhooks</td><td>Signature-verified. An approval or a dispute still lands if the buyer closes the tab; a dispute lowers that shop's trust for its next sale.</td></tr>
         <tr><td>PayPal Agent Toolkit</td><td>Published products are registered in PayPal's catalog, and the shop owner's money assistant reads PayPal records. Read-only for the model.</td></tr>
-        <tr><td>Claude</td><td>Tool-use loops for the shopper, strict-schema catalog extraction, and the money assistant. Shop text is treated as data, never as instructions.</td></tr>
+        <tr><td>AI model</td><td>Claude, or Gemini when that key is set. Tool-use loops for the shopper, strict-schema catalog extraction, and the money assistant. Shop text is treated as data, never as instructions.</td></tr>
         <tr><td>MCP endpoint</td><td>Any MCP client can search, dry-run the guard and check out at <code>/mcp</code>, under each buyer's own key and rules.</td></tr>
         <tr><td>AG Grid</td><td>Orders ledger with quick filter, totals row and CSV export; an editable live catalog; the audit trail; lost sales.</td></tr>
         <tr><td>Render</td><td>Deployed from <code>render.yaml</code> with a health check. Without keys it runs a PayPal simulator through the same code paths.</td></tr>
-        <tr><td>Tests</td><td>44 automated tests on the guard, accounts, MCP checkout, webhooks and stale approvals, run by CI on Node 22 and 24.</td></tr>
+        <tr><td>Tests</td><td>45 automated tests on the guard, accounts, MCP checkout, webhooks and stale approvals, run by CI on Node 22 and 24.</td></tr>
       </table>
     </section>
 

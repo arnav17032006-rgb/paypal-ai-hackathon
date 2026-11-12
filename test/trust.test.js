@@ -69,3 +69,30 @@ test("a dispute lowers trust and can push a merchant below the guard's minimum",
   const r = guard.evaluate({ productId: "p_atomic", quantity: 1 });
   assert.equal(r.decision, "block");
 });
+
+test("an Anthropic-style agent turn survives the trip to an OpenAI-compatible provider and back", async () => {
+  const { toOpenAI, fromOpenAI } = await import("../server/ai.js");
+  const tools = [{ name: "search_products", description: "Search", strict: true, input_schema: { type: "object", additionalProperties: false, required: ["query"], properties: { query: { type: "string" } } } }];
+  const reply = fromOpenAI({ choices: [{ message: { role: "assistant", content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: "search_products", arguments: "{\"query\":\"cake\"}" }, extra_content: { signature: "keep-me" } }] } }] });
+  assert.equal(reply.stop_reason, "tool_use");
+  assert.deepEqual(reply.content[0], { type: "tool_use", id: "call_1", name: "search_products", input: { query: "cake" } });
+  const req = toOpenAI({
+    system: "You shop.",
+    tools,
+    messages: [
+      { role: "user", content: "a cake" },
+      { role: "assistant", content: reply.content },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "call_1", content: "[]" }] },
+    ],
+  }, "some-model");
+  assert.equal(req.model, "some-model");
+  assert.deepEqual(req.messages.map((m) => m.role), ["system", "user", "assistant", "tool"]);
+  assert.equal(req.messages[2].tool_calls[0].extra_content.signature, "keep-me"); // the provider's own message goes back untouched
+  assert.equal(req.messages[3].tool_call_id, "call_1");
+  assert.equal(req.tools[0].function.parameters.additionalProperties, undefined);
+  assert.deepEqual(req.tools[0].function.parameters.required, ["query"]);
+  const done = fromOpenAI({ choices: [{ message: { role: "assistant", content: "I picked the cake." } }] });
+  assert.equal(done.stop_reason, "end_turn");
+  assert.equal(done.content[0].text, "I picked the cake.");
+  assert.throws(() => fromOpenAI({ error: { message: "bad key" } }), /bad key/);
+});

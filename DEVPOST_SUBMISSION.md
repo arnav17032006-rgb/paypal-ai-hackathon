@@ -87,7 +87,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
   - Webhooks checked with `verify-webhook-signature` against the exact raw request body, and each event applied once.
 - **PayPal Agent Toolkit:** `create_product` when a merchant publishes, and read-only transaction, dispute, order, product and invoice tools for the money assistant. Write actions are never given to the model.
 - **MCP:** the official TypeScript SDK, as a stateless Streamable HTTP endpoint.
-- **Tests:** 44 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
+- **Tests:** 45 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
 - **Deploy:** a Render Blueprint (`render.yaml`) with a health check.
 - **No keys needed to try it.** Without keys, a rule-based extractor and shopper stand in for Claude, and a local simulator that returns PayPal's response shapes stands in for the sandbox. The header shows which mode is active.
 
@@ -104,7 +104,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 - No money moves without a person approving it on PayPal, and no agent, prompt or shop page can change the owner's rules.
 - Any MCP agent, not just ours, can shop AgentReady stores under the same guard.
 - The full authorize, capture, void, refund and dispute cycle, with webhooks and idempotency keys.
-- 44 automated tests, including stale approvals, parallel checkouts and webhook retries.
+- 45 automated tests, including stale approvals, parallel checkouts and webhook retries.
 - It runs with zero setup, and switches to Claude and the real PayPal sandbox as soon as keys are added.
 
 #### What we learned
@@ -190,7 +190,7 @@ Open http://localhost:3000. It runs without any keys, using the PayPal simulator
 6. Back as the buyer, ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the order waits for your OK.
 7. Connect your own agent with the command shown on the buyer's **Shop with agent** tab, then ask it to buy something.
 
-`npm test` runs all 44 tests.
+`npm test` runs all 45 tests.
 
 ---
 
