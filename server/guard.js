@@ -9,8 +9,8 @@ export const DECISION = { ALLOW: "allow", ASK: "ask", BLOCK: "block" };
  * `excludeOrderId` re-checks an existing order without counting it against its own limits.
  * @returns {{decision: string, checks: {rule: string, ok: boolean, severity: string, detail: string}[], amount: number}}
  */
-export function evaluate({ productId, quantity = 1, deadlineDays, excludeOrderId }) {
-  const { mandate } = store.data();
+export function evaluate({ productId, quantity = 1, deadlineDays, excludeOrderId, buyerId = store.DEMO_BUYER }) {
+  const mandate = store.mandateFor(buyerId);
   const found = store.product(productId);
   if (!found) {
     return { decision: DECISION.BLOCK, amount: 0, checks: [{ rule: "product_exists", ok: false, severity: "block", detail: `Unknown product ${productId}` }] };
@@ -23,7 +23,7 @@ export function evaluate({ productId, quantity = 1, deadlineDays, excludeOrderId
   add("currency", product.currency === mandate.currency, "block", `Priced in ${product.currency}; mandate allows ${mandate.currency}`);
   add("category", mandate.allowedCategories.includes(product.category), "block", `Category "${product.category}" ${mandate.allowedCategories.includes(product.category) ? "is" : "is not"} allowed by the mandate`);
   add("per_order_limit", amount <= mandate.perOrderLimit, "block", `$${amount} vs per-order limit $${mandate.perOrderLimit}`);
-  const spent = store.spentToday(excludeOrderId);
+  const spent = store.spentToday(excludeOrderId, buyerId);
   add("daily_limit", spent + amount <= mandate.dailyLimit, "block", `$${spent} already committed today + $${amount} vs daily limit $${mandate.dailyLimit}`);
   const reserved = store.reservedUnits(productId, excludeOrderId);
   add("stock", product.stock - reserved >= quantity, "block", `${product.stock} in stock, ${reserved} reserved by unpaid orders, ${quantity} requested`);

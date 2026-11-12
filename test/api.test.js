@@ -18,10 +18,22 @@ before(async () => {
 after(() => server.close());
 beforeEach(() => store.reset());
 
-const post = async (path, body) => {
-  const r = await fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+// Every API call runs as one of the demo accounts: shop actions as the demo shop owner, the rest as the demo buyer.
+const cookies = {};
+async function login(role) {
+  if (!cookies[role]) {
+    const r = await fetch(`${base}/api/auth/demo`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+    cookies[role] = r.headers.get("set-cookie").split(";")[0];
+  }
+  return cookies[role];
+}
+const ownerAction = (path) => path.startsWith("/api/merchants") || /\/(fulfil|void|refund)$/.test(path) || path === "/api/assistant";
+
+const post = async (path, body, role = ownerAction(path) ? "merchant" : "buyer") => {
+  const r = await fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json", Cookie: await login(role) }, body: JSON.stringify(body) });
   return { status: r.status, body: await r.json() };
 };
+const getState = async (role) => (await fetch(`${base}/api/state`, { headers: { Cookie: await login(role) } })).json();
 
 async function mcpClient() {
   const client = new Client({ name: "test-agent", version: "1.0.0" });
@@ -131,7 +143,7 @@ test("lost sales tell a merchant which rule stopped agents, counted once per att
   await client.close();
   assert.equal(bought.status, "blocked");
 
-  const { lostSales } = await (await fetch(`${base}/api/state`)).json();
+  const { lostSales } = await getState("merchant");
   const trust = lostSales.find((r) => r.rule === "merchant_trust" && r.productName.includes("AirBuds"));
   assert.ok(trust, "the scam shop's trust block is listed");
   // The web agent once, and the MCP agent once: its dry-run and its checkout are the same attempt.
@@ -144,6 +156,6 @@ test("lost sales tell a merchant which rule stopped agents, counted once per att
 
 test("an allowed purchase is not a lost sale", async () => {
   await post("/api/agent/run", { goal: "Chocolate birthday cake under $30, needed tomorrow" });
-  const { lostSales } = await (await fetch(`${base}/api/state`)).json();
+  const { lostSales } = await getState("merchant");
   assert.ok(!lostSales.some((r) => /chocolate truffle/i.test(r.productName)));
 });

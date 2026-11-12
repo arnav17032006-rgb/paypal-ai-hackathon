@@ -17,14 +17,22 @@ export function load() {
     db = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
     db.webhookEvents ||= [];
     db.misses ||= [];
+    db.users ||= [];
+    db.sessions ||= [];
+    ensureDemoUsers();
   } else {
     reset();
   }
   return db;
 }
 
+/** Back to the seed data. Accounts people created, and their sessions, survive a reset. */
 export function reset() {
+  const accounts = { users: (db?.users || []).filter((u) => !u.demo), sessions: db?.sessions || [] };
   db = JSON.parse(fs.readFileSync(SEED_FILE, "utf8"));
+  db.users = accounts.users;
+  db.sessions = accounts.sessions;
+  ensureDemoUsers();
   db.orders = [];
   db.events = [];
   db.webhookEvents = [];
@@ -62,6 +70,39 @@ export function findOrder(predicate) {
   return db.orders.find(predicate);
 }
 
+// ---------------------------------------------------------------- accounts
+
+// Demo accounts let anyone try both sides with one click. The demo shop owner manages the seed shops,
+// and the demo buyer uses the seed spending mandate.
+export const DEMO_BUYER = "u_demo_buyer";
+export const DEMO_OWNER = "u_demo_owner";
+
+function ensureDemoUsers() {
+  const seedShops = db.merchants.filter((m) => m.source === "seed").map((m) => m.id);
+  const demo = [
+    { id: DEMO_BUYER, role: "buyer", name: "Demo buyer", email: "buyer@demo.agentready", demo: true },
+    { id: DEMO_OWNER, role: "merchant", name: "Demo shop owner", email: "owner@demo.agentready", demo: true, merchantIds: seedShops },
+  ];
+  db.users = [...demo, ...db.users.filter((u) => !u.demo)];
+}
+
+export const user = (uid) => db.users.find((u) => u.id === uid);
+export const userByEmail = (email) => db.users.find((u) => u.email === email);
+export const userByAgentKey = (key) => (key ? db.users.find((u) => u.role === "buyer" && u.agentKey && u.agentKey === key) : undefined);
+
+/** Orders from before accounts existed belong to the demo buyer. */
+export const buyerOf = (o) => o.buyerId || DEMO_BUYER;
+
+/** A buyer's spending mandate. The demo buyer uses the seed mandate. */
+export function mandateFor(buyerId = DEMO_BUYER) {
+  return user(buyerId)?.mandate || db.mandate;
+}
+
+/** The shops a shop owner manages (ignoring any removed by a reset). */
+export function shopsOf(u) {
+  return (u?.merchantIds || []).filter((mid) => merchant(mid));
+}
+
 export function log(type, message, extra = {}) {
   const e = { id: id("evt"), at: new Date().toISOString(), type, message, ...extra };
   db.events.unshift(e);
@@ -77,11 +118,11 @@ const UNPAID = ["PENDING", "AWAITING_APPROVAL"];
 const RESERVATION_MS = 24 * 60 * 60 * 1000;
 const committedAt = (o) => o.committedAt || o.createdAt;
 
-/** Spend committed today, optionally leaving out the order being re-checked. */
-export function spentToday(excludeOrderId) {
+/** One buyer's spend committed today, optionally leaving out the order being re-checked. */
+export function spentToday(excludeOrderId, buyerId = DEMO_BUYER) {
   const today = new Date().toISOString().slice(0, 10);
   return db.orders
-    .filter((o) => o.id !== excludeOrderId && committedAt(o).startsWith(today) && COMMITTED.includes(o.status))
+    .filter((o) => buyerOf(o) === buyerId && o.id !== excludeOrderId && committedAt(o).startsWith(today) && COMMITTED.includes(o.status))
     .reduce((s, o) => s + o.amount, 0);
 }
 

@@ -38,6 +38,8 @@ We wanted both sides fixed at once: make small shops agent-ready, and make sure 
 
 AgentReady has two sides, joined by PayPal.
 
+**Two sides, two logins.** People sign up as a buyer or a shop owner and each sees only their side: buyers get their own spending rules, orders and agent key; shop owners see their own shops, orders, payouts and lost sales. Every action is checked on the server for the right role and owner, and one-click demo accounts let anyone try both.
+
 **For merchants: become agent-ready.** A merchant pastes their shop text or a URL. Claude turns it into a structured catalog (products, prices, refund and delivery policies) and the shop is published to agents over MCP and a JSON feed. The products are registered in PayPal's catalog through the PayPal Agent Toolkit, and payments go straight to the merchant's PayPal account.
 
 **For shoppers: let an agent buy safely.** The owner says *"chocolate birthday cake under $30, needed tomorrow"*. A Claude tool-use agent searches every shop, dry-runs each candidate against the guard, and commits to the best one. The owner approves the payment on PayPal.
@@ -83,7 +85,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
   - Webhooks checked with `verify-webhook-signature` against the exact raw request body, and each event applied once.
 - **PayPal Agent Toolkit:** `create_product` when a merchant publishes, and read-only transaction, dispute, order, product and invoice tools for the money assistant. Write actions are never given to the model.
 - **MCP:** the official TypeScript SDK, as a stateless Streamable HTTP endpoint.
-- **Tests:** 34 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
+- **Tests:** 41 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
 - **Deploy:** a Render Blueprint (`render.yaml`) with a health check.
 - **No keys needed to try it.** Without keys, a rule-based extractor and shopper stand in for Claude, and a local simulator that returns PayPal's response shapes stands in for the sandbox. The header shows which mode is active.
 
@@ -100,7 +102,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 - No money moves without a person approving it on PayPal, and no agent, prompt or shop page can change the owner's rules.
 - Any MCP agent, not just ours, can shop AgentReady stores under the same guard.
 - The full authorize, capture, void, refund and dispute cycle, with webhooks and idempotency keys.
-- 34 automated tests, including stale approvals, parallel checkouts and webhook retries.
+- 41 automated tests, including stale approvals, parallel checkouts and webhook retries.
 - It runs with zero setup, and switches to Claude and the real PayPal sandbox as soon as keys are added.
 
 #### What we learned
@@ -176,13 +178,15 @@ Open http://localhost:3000. It runs without any keys, using the PayPal simulator
 
 **What to try (5 minutes):**
 
-1. **Shop with agent** → click *"Chocolate birthday cake under $30, needed tomorrow"* → **Run agent**. It buys from the trusted bakery, and the guard blocks the 95%-off earbuds from the scam shop.
-2. Click **Pay with PayPal** and approve. In **Orders & ledger** the order shows funds held. Click **Mark delivered** to capture them.
-3. Ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the order waits for your OK.
-4. **Become agent-ready** → **Try a suspicious shop** → **Extract catalog**. The code scan catches the hidden instruction aimed at AI agents, and the shop scores 10/100.
-5. Connect your own agent: `claude mcp add --transport http agentready http://localhost:3000/mcp`, then ask it to buy something.
+1. On the login page click **Try as demo buyer** (or create your own buyer account).
+2. **Shop with agent** → click *"Chocolate birthday cake under $30, needed tomorrow"* → **Run agent**. It buys from the trusted bakery, and the guard blocks the 95%-off earbuds from the scam shop.
+3. Click **Pay with PayPal** and approve. In **My orders** the order shows funds held.
+4. **Log out** → **Try as demo shop owner**. In **Orders & payouts** click **Mark delivered** on that order to capture the money.
+5. **My shops** → **Try a suspicious shop** → **Extract catalog**. The code scan catches the hidden instruction aimed at AI agents, and the shop scores 10/100. Lower down, **Why agents didn't buy** shows which rule stopped each sale.
+6. Back as the buyer, ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the order waits for your OK.
+7. Connect your own agent with the command shown on the buyer's **Shop with agent** tab, then ask it to buy something.
 
-`npm test` runs all 34 tests.
+`npm test` runs all 41 tests.
 
 ---
 

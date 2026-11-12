@@ -19,8 +19,13 @@ before(async () => {
 after(() => server.close());
 beforeEach(() => store.reset());
 
+let buyerCookie;
 const confirm = async (o) => {
-  const r = await fetch(`${base}/api/orders/${o.id}/confirm`, { method: "POST" });
+  if (!buyerCookie) {
+    const login = await fetch(`${base}/api/auth/demo`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: "buyer" }) });
+    buyerCookie = login.headers.get("set-cookie").split(";")[0];
+  }
+  const r = await fetch(`${base}/api/orders/${o.id}/confirm`, { method: "POST", headers: { Cookie: buyerCookie } });
   return { status: r.status, body: await r.json() };
 };
 const place = async (productId) => (await orders.placeOrder({ productId, quantity: 1, channel: "MCP agent" })).order;

@@ -12,17 +12,21 @@
   <header>
     <div class="brand"><span class="logo">◆</span> AgentReady <small>safe agent payments on PayPal</small></div>
     <div id="modes"></div>
+    <div class="account">
+      <span id="whoami"></span>
+      <button id="logout-btn" type="button">Log out</button>
+    </div>
   </header>
 
   <nav>
-    <button data-tab="shop" class="active">Shop with agent</button>
-    <button data-tab="merchant">Become agent-ready</button>
-    <button data-tab="orders">Orders &amp; ledger</button>
-    <button data-tab="mandate">Mandate</button>
+    <button data-tab="shop" data-role="buyer">Shop with agent</button>
+    <button data-tab="merchant" data-role="merchant">My shops</button>
+    <button data-tab="orders" id="orders-nav">Orders</button>
+    <button data-tab="mandate" data-role="buyer">Spending rules</button>
   </nav>
 
   <main>
-    <section id="tab-shop" class="tab active">
+    <section id="tab-shop" class="tab" data-role="buyer">
       <div class="card">
         <h2>Tell your agent what to buy</h2>
         <p class="muted">It searches agent-ready shops, checks every option against your mandate and the trust guard, then pays through PayPal.</p>
@@ -41,7 +45,8 @@
       <div id="agent-result"></div>
       <div class="card">
         <h3>Bring your own agent (MCP)</h3>
-        <p class="muted">Any MCP-capable assistant can shop these stores through the same guard. It gets search, guard dry-run and checkout tools, and a person still approves every payment on PayPal.</p>
+        <p class="muted">Any MCP-capable assistant can shop these stores through the same guard, under your spending rules. It gets search, guard dry-run and checkout tools, and you still approve every payment on PayPal.</p>
+        <p class="muted" id="mcp-key-note" hidden>These commands include your personal agent key. Keep it private: anyone with it can ask for purchases under your rules (you still approve each payment).</p>
         <p class="muted"><b>Claude Code</b></p>
         <pre class="cmd" id="mcp-claude-code"></pre>
         <p class="muted"><b>Claude Desktop</b>: Settings → Developer → Edit Config, then restart</p>
@@ -49,7 +54,7 @@
       </div>
     </section>
 
-    <section id="tab-merchant" class="tab">
+    <section id="tab-merchant" class="tab" data-role="merchant">
       <div class="card">
         <h2>Make your shop agent-ready in a minute</h2>
         <p class="muted">Paste your Instagram captions, WhatsApp price list or website text, or give a URL. AI turns it into a catalog AI agents can buy from, paid straight into your PayPal.</p>
@@ -65,7 +70,7 @@
         </form>
       </div>
       <div id="onboard-result"></div>
-      <div class="card"><h3>Agent-ready merchants</h3><div id="grid-merchants" class="ag-theme-quartz grid"></div></div>
+      <div class="card"><h3>Your shops</h3><p class="muted" id="no-shops" hidden>You have no shops yet. Paste your shop text above and publish it.</p><div id="grid-merchants" class="ag-theme-quartz grid"></div></div>
       <div class="card">
         <h3>Why agents didn't buy</h3>
         <p class="muted">Every sale the trust guard stopped, grouped by shop, product and rule, with what the merchant can do about it. Some rules are the buyer's own limits and say so.</p>
@@ -76,11 +81,11 @@
     <section id="tab-orders" class="tab">
       <div id="kpis" class="kpis"></div>
       <div class="card">
-        <h3>Agent orders</h3>
-        <p class="muted">Funds are only held at approval. The merchant's "Mark delivered" captures them; "Release" voids the hold.</p>
+        <h3 id="orders-title">Agent orders</h3>
+        <p class="muted" id="orders-help"></p>
         <div id="grid-orders" class="ag-theme-quartz grid"></div>
       </div>
-      <div class="card">
+      <div class="card" data-role="merchant">
         <h3>Ask about the money</h3>
         <p class="muted" id="assistant-note">Answers from AgentReady's ledger.</p>
         <form id="assistant-form" class="row">
@@ -94,10 +99,13 @@
 
     <section id="tab-mandate" class="tab">
       <div class="card">
-        <h2>Spending mandate</h2>
+        <h2>Spending rules</h2>
         <p class="muted">The rules your agent can never break. The trust guard enforces them in code before any PayPal order is created.</p>
         <form id="mandate-form" class="mandate"></form>
-        <hr />
+      </div>
+      <div class="card" id="reset-card" hidden>
+        <h3>Demo data</h3>
+        <p class="muted">You are using a shared demo account. Resetting clears the demo orders and any shops added since.</p>
         <button id="reset-btn" class="danger">Reset demo data</button>
       </div>
     </section>

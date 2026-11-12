@@ -21,7 +21,7 @@ function guardView(verdict) {
   };
 }
 
-function buildServer() {
+function buildServer(buyerId) {
   const server = new McpServer({ name: "agentready", version: "1.0.0" }, {
     instructions:
       "AgentReady lists small merchants that accept payments from AI agents through PayPal. " +
@@ -36,7 +36,7 @@ function buildServer() {
     inputSchema: { query: z.string().describe("Keywords, e.g. 'birthday cake chocolate'"), max_price: z.number().optional().describe("Upper bound in USD") },
   }, async ({ query, max_price }) => {
     const results = searchProducts({ query, max_price: max_price || 0 });
-    store.log("mcp", `${CHANNEL} searched "${query}"${max_price ? ` under $${max_price}` : ""}: ${results.length} result(s)`);
+    store.log("mcp", `${CHANNEL} searched "${query}"${max_price ? ` under $${max_price}` : ""}: ${results.length} result(s)`, { buyerId });
     return json(results);
   });
 
@@ -58,14 +58,14 @@ function buildServer() {
     title: "Owner's spending rules",
     description: "The owner's spending mandate (limits, allowed categories, minimum merchant trust) and how much is already committed today.",
     inputSchema: {},
-  }, async () => json({ mandate: store.data().mandate, spent_today_usd: store.spentToday() }));
+  }, async () => json({ mandate: store.mandateFor(buyerId), spent_today_usd: store.spentToday(undefined, buyerId) }));
 
   server.registerTool("check_purchase", {
     title: "Dry-run the guard",
     description: "Check a candidate purchase against the mandate and trust guard. No money moves. Returns allow, ask (owner must OK it) or block, with each failed rule.",
     inputSchema: { product_id: z.string(), quantity: z.number().int().min(1).default(1), deadline_days: z.number().int().min(0).optional().describe("Days until it is needed") },
   }, async ({ product_id, quantity, deadline_days }) => {
-    const verdict = guard.evaluate({ productId: product_id, quantity, deadlineDays: deadline_days || undefined });
+    const verdict = guard.evaluate({ productId: product_id, quantity, deadlineDays: deadline_days || undefined, buyerId });
     if (verdict.decision === guard.DECISION.BLOCK) store.recordMiss(verdict, CHANNEL);
     return json(guardView(verdict));
   });
@@ -83,7 +83,7 @@ function buildServer() {
     },
   }, async ({ product_id, quantity, deadline_days, reason }) => {
     const { order, verdict } = await orders.placeOrder({
-      productId: product_id, quantity, deadlineDays: deadline_days, reason, goal: reason, engine: "mcp", channel: CHANNEL,
+      productId: product_id, quantity, deadlineDays: deadline_days, reason, goal: reason, engine: "mcp", channel: CHANNEL, buyerId,
     });
     if (!order) return json({ status: "blocked", message: "The trust guard blocked this purchase. No PayPal order was created.", ...guardView(verdict) });
     if (order.status === "NEEDS_USER_OK") {
@@ -104,7 +104,8 @@ function buildServer() {
     description: "Status of an order created by checkout: NEEDS_USER_OK, AWAITING_APPROVAL, AUTHORIZED (funds held), CAPTURED (paid), BLOCKED (the guard stopped it before any funds were held), FAILED (PayPal error), VOIDED, REFUNDED, DECLINED or CANCELLED.",
     inputSchema: { order_id: z.string() },
   }, async ({ order_id }) => {
-    const o = store.order(order_id);
+    const found = store.order(order_id);
+    const o = found && store.buyerOf(found) === buyerId ? found : null;
     if (!o) return { ...json({ error: `Unknown order ${order_id}` }), isError: true };
     return json({
       order_id: o.id, status: o.status, item: o.productName, merchant: o.merchantName, amount_usd: o.amount,
@@ -115,10 +116,22 @@ function buildServer() {
   return server;
 }
 
+/**
+ * Which buyer an MCP request shops for. A buyer's own agent key (Authorization: Bearer <key>, or ?key=)
+ * selects their account, mandate and orders. With no key the agent shops for the public demo buyer.
+ */
+function buyerFor(req) {
+  const key = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "") || String(req.query.key || "");
+  if (!key) return store.DEMO_BUYER;
+  return store.userByAgentKey(key)?.id;
+}
+
 /** Stateless Streamable HTTP: one short-lived MCP server per request. */
 export function mount(app) {
   app.post("/mcp", async (req, res) => {
-    const server = buildServer();
+    const buyerId = buyerFor(req);
+    if (!buyerId) return res.status(401).json({ jsonrpc: "2.0", error: { code: -32001, message: "Unknown agent key. Copy it again from your Shop tab." }, id: null });
+    const server = buildServer(buyerId);
     try {
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       res.on("close", () => { transport.close(); server.close(); });

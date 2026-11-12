@@ -22,7 +22,7 @@ export class GuardBlockedError extends Error {
 }
 
 /** The guard's verdict on an existing order, without counting the order against its own limits. */
-const recheck = (o) => guard.evaluate({ productId: o.productId, quantity: o.quantity, excludeOrderId: o.id });
+const recheck = (o) => guard.evaluate({ productId: o.productId, quantity: o.quantity, excludeOrderId: o.id, buyerId: store.buyerOf(o) });
 const blockedRules = (verdict) => verdict.checks.filter((c) => c.severity === "block").map((c) => c.rule.replace(/_/g, " ")).join(", ");
 
 // The PayPal return redirect and a webhook can race for the same order; only one may act on it.
@@ -71,13 +71,13 @@ async function commit(o, onFailure) {
  * Turn an agent's checkout into an order. The guard is re-run here: what the agent saw may be stale.
  * Returns the order (null when blocked) and the guard verdict.
  */
-export async function placeOrder({ productId, quantity = 1, deadlineDays, reason = "", goal = "", engine, channel = "web agent" }) {
+export async function placeOrder({ productId, quantity = 1, deadlineDays, reason = "", goal = "", engine, channel = "web agent", buyerId = store.DEMO_BUYER }) {
   const found = store.product(productId);
-  const verdict = guard.evaluate({ productId, quantity, deadlineDays: deadlineDays || undefined });
+  const verdict = guard.evaluate({ productId, quantity, deadlineDays: deadlineDays || undefined, buyerId });
   if (verdict.decision === guard.DECISION.BLOCK || !found) {
     if (channel !== "web agent") {
       // The web agent's blocks are logged and counted by its own run, which sees every candidate it tried.
-      store.log("guard", `Blocked ${found?.product.name || productId} for ${channel}`, { checks: verdict.checks });
+      store.log("guard", `Blocked ${found?.product.name || productId} for ${channel}`, { checks: verdict.checks, buyerId, merchantId: found?.merchant.id });
       store.recordMiss(verdict, channel);
     }
     return { order: null, verdict };
@@ -85,6 +85,7 @@ export async function placeOrder({ productId, quantity = 1, deadlineDays, reason
   const order = {
     id: store.id("ord"),
     createdAt: new Date().toISOString(),
+    buyerId,
     goal,
     channel,
     productId: found.product.id,

@@ -24,6 +24,7 @@ AI agents are starting to shop for people. Two things stand in the way:
 
 | Part | What it does | PayPal |
 |---|---|---|
+| **Accounts for both sides** | Sign up or log in as a **buyer** or a **shop owner**, and each sees only their side. Buyers get their own spending rules, orders and agent key; shop owners see only their own shops, orders, payouts and lost sales. Passwords are stored as salted scrypt hashes, sessions are HttpOnly cookies, and every action is checked on the server for the right role and owner. One-click demo accounts let judges try both sides without signing up. | |
 | **Merchant onboarding** | A merchant pastes shop text or a URL. Claude extracts products, prices, refund and delivery policies, and flags scam patterns. The shop is published to agents over MCP and as a JSON feed (`/api/agent-feed`). | Products registered in the PayPal catalog with the **Agent Toolkit**; payee email so money goes straight to the merchant |
 | **Injection-resistant trust score** | The score is computed on the server from the shop's own text, never from what the browser sends back. A code scan (not the AI) catches common instructions aimed at AI agents, unprotected payment methods, "all sales final" and impossible discounts. A refund policy only counts if it is really in the shop's text. The scan matches patterns, so cleverly reworded text can get past it; limits and PayPal approval still apply either way. | |
 | **Shopper agent** | The user says *"chocolate birthday cake under $30, needed tomorrow"*. A Claude tool-use agent searches every shop, dry-runs candidates against the guard, and commits to the best one. | Orders v2 with `intent: AUTHORIZE` |
@@ -47,7 +48,7 @@ cp .env.example .env    # optional: add keys, see below
 npm start
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. You land on the login page: create an account as a buyer or a shop owner, or click **Try as demo buyer** / **Try as demo shop owner**. The demo shop owner manages the three sample shops.
 
 **It runs with no keys at all.** The header shows which mode is active:
 
@@ -67,7 +68,7 @@ Open http://localhost:3000.
 
 ## Connect your own agent (MCP)
 
-The server speaks MCP over Streamable HTTP at `/mcp`. The **Shop with agent** tab shows the exact commands for your host.
+The server speaks MCP over Streamable HTTP at `/mcp`. The **Shop with agent** tab shows the exact commands for your host. A buyer's commands include their personal agent key (`Authorization: Bearer <key>`), so the agent shops under that buyer's own spending rules and orders. Without a key, the agent shops as the demo buyer.
 
 ```bash
 claude mcp add --transport http agentready http://localhost:3000/mcp
@@ -102,13 +103,14 @@ Then ask: *"Use AgentReady to buy a chocolate birthday cake under $30."* The age
   - Server-side refusal fallback (`fallbacks: "default"`) is enabled on every call.
 - **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): catalog sync on publish (`create_product`) and the assistant's read-only tools. Write actions are not enabled for the model.
 - **MCP** (`@modelcontextprotocol/sdk`): the `/mcp` endpoint for outside agents.
-- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (34 tests, including MCP, webhook and stale-approval flows end to end).
+- The money path is **not** left to the model: limits and trust checks are plain code (`server/guard.js`), covered by `npm test` (41 tests, including MCP, webhook and stale-approval flows end to end).
 
 ## Project layout
 
 ```
 server/index.js    Starts the server
-server/app.js      Express API, onboarding drafts, PayPal return/cancel, simulator pages
+server/app.js      Express API, accounts, onboarding drafts, PayPal return/cancel, simulator pages
+server/auth.js     Password hashing, sessions and role checks
 server/orders.js   Order lifecycle shared by every agent, redirect and webhook
 server/mcp.js      MCP endpoint for outside agents
 server/webhooks.js Verified PayPal webhooks (and simulated ones in demo mode)
@@ -118,8 +120,8 @@ server/ai.js       Claude catalog extraction, shopper agent and money assistant,
 server/guard.js    Trust guard, red-flag scan and merchant trust scoring
 server/store.js    JSON file store (data/db.json)
 server/seed.json   Demo mandate and merchants
-public/            Web app (vanilla JS + AG Grid Community)
-test/              Guard, trust and end-to-end API tests (npm test)
+public/            Web app (vanilla JS + AG Grid Community) and the login page
+test/              Guard, trust, accounts and end-to-end API tests (npm test)
 .github/workflows/ CI: the tests on Node 22 and 24, plus a start-up check, on every push
 DEVPOST_SUBMISSION.md  Hackathon write-up, testing steps for judges and the video script
 ```
@@ -129,7 +131,7 @@ DEVPOST_SUBMISSION.md  Hackathon write-up, testing steps for judges and the vide
 - **Sandbox only.** No real money moves. Without PayPal keys the app uses a local simulator that mirrors PayPal's responses, and the header says so.
 - **The demo shops are seed data.** Their order counts, disputes and trust scores are made up for the demo. Only shops you onboard are scored from their own text.
 - **The red-flag scan matches patterns.** Reworded scam text or a new kind of injection can get past it. Spending limits and the buyer's PayPal approval still apply.
-- **One owner, no sign-in.** There is a single spending mandate and no user accounts, and the MCP endpoint is open. Anyone who can reach the URL can use it, so this is a demo, not a multi-user service.
+- **Simple accounts.** There is no email verification or password reset, and the demo accounts are shared by everyone who clicks them (only they can reset the demo data). The MCP endpoint without a key acts for the demo buyer.
 - **A JSON file is the database.** It suits one server process. On a host without a persistent disk, data resets when the service restarts.
 - **Seed merchants have no payee email,** so in the sandbox their payments go to the app's own business account. Paying a merchant directly needs their PayPal email at onboarding.
 

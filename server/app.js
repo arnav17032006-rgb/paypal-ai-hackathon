@@ -12,17 +12,24 @@ import * as orders from "./orders.js";
 import * as webhooks from "./webhooks.js";
 import * as toolkit from "./toolkit.js";
 import * as mcp from "./mcp.js";
+import * as auth from "./auth.js";
+import crypto from "node:crypto";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const app = express();
+app.set("trust proxy", 1); // Render terminates HTTPS in front of us; this makes req.secure true there
 app.use(express.json({
   limit: "1mb",
   // Webhook signatures are checked against the exact bytes PayPal sent.
   verify: (req, _res, buf) => { if (req.originalUrl.startsWith("/api/webhooks/")) req.rawBody = buf.toString("utf8"); },
 }));
-app.use(express.static(path.join(here, "..", "public")));
-
 store.load();
+app.use(auth.attachUser);
+
+// The app needs a login; the login page is for people who aren't logged in.
+app.get(["/", "/index.html"], (req, res, next) => (req.user ? next() : res.redirect("/login.html")));
+app.get("/login.html", (req, res, next) => (req.user ? res.redirect("/") : next()));
+app.use(express.static(path.join(here, "..", "public")));
 
 const wrap = (fn) => (req, res) => Promise.resolve(fn(req, res)).catch((err) => {
   if (!err.status) console.error(err);
@@ -31,34 +38,117 @@ const wrap = (fn) => (req, res) => Promise.resolve(fn(req, res)).catch((err) => 
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+// ---------------------------------------------------------------- accounts
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+app.post("/api/auth/signup", wrap(async (req, res) => {
+  const name = String(req.body.name || "").trim().slice(0, 60);
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+  const role = String(req.body.role || "");
+  if (!auth.ROLES.includes(role)) return res.status(400).json({ error: "Choose whether you are a buyer or a shop owner" });
+  if (!name) return res.status(400).json({ error: "Enter your name" });
+  if (!EMAIL_RE.test(email) || email.length > 120) return res.status(400).json({ error: "Enter a valid email address" });
+  if (password.length < 8 || password.length > 200) return res.status(400).json({ error: "Use a password of at least 8 characters" });
+  if (store.userByEmail(email)) return res.status(409).json({ error: "An account with this email already exists. Log in instead." });
+  const u = {
+    id: store.id("u"), role, name, email,
+    passwordHash: await auth.hashPassword(password),
+    createdAt: new Date().toISOString(),
+  };
+  if (role === "buyer") {
+    // Every buyer starts with the default spending rules and their own key for outside agents.
+    u.mandate = { ...structuredClone(store.data().mandate), owner: name };
+    u.agentKey = crypto.randomBytes(24).toString("hex");
+  } else {
+    u.merchantIds = [];
+  }
+  store.data().users.push(u);
+  auth.startSession(req, res, u);
+  res.status(201).json(auth.publicUser(u));
+}));
+
+app.post("/api/auth/login", wrap(async (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+  const role = String(req.body.role || "");
+  const key = `${req.ip}|${email}`;
+  if (auth.tooManyFailures(key)) return res.status(429).json({ error: "Too many failed attempts. Try again in 15 minutes." });
+  const u = store.userByEmail(email);
+  if (!u || u.demo || !(await auth.verifyPassword(password, u.passwordHash))) {
+    auth.noteFailure(key);
+    return res.status(401).json({ error: "Email or password is wrong" });
+  }
+  if (role && role !== u.role) {
+    return res.status(403).json({ error: `This is a ${auth.roleName(u.role)} account. Choose "${u.role === "merchant" ? "Shop owner" : "Buyer"}" to log in.` });
+  }
+  auth.clearFailures(key);
+  auth.startSession(req, res, u);
+  res.json(auth.publicUser(u));
+}));
+
+// One-click demo accounts, so anyone can try both sides without signing up.
+app.post("/api/auth/demo", (req, res) => {
+  const u = store.user(req.body.role === "merchant" ? store.DEMO_OWNER : store.DEMO_BUYER);
+  auth.startSession(req, res, u);
+  res.json(auth.publicUser(u));
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  auth.endSession(req, res);
+  res.json({ ok: true });
+});
+
+app.get("/api/auth/me", auth.requireUser, (req, res) => res.json(auth.publicUser(req.user)));
+
 // ---------------------------------------------------------------- state
 
-app.get("/api/state", (req, res) => {
+const ownsAsBuyer = (u, o) => u.role === "buyer" && store.buyerOf(o) === u.id;
+const ownsAsMerchant = (u, o) => u.role === "merchant" && store.shopsOf(u).includes(o.merchantId);
+
+/** Each person sees only their side: a buyer their own orders and rules, a shop owner their own shops. */
+app.get("/api/state", auth.requireUser, (req, res) => {
   const d = store.data();
+  const u = req.user;
+  const modes = { ai: ai.aiMode, paypal: paypal.paypalMode, webhooks: webhooks.webhookMode, toolkit: toolkit.toolkitReady };
+  const orderOf = (e) => (e.orderId ? store.order(e.orderId) : null);
+  if (u.role === "buyer") {
+    const orders = d.orders.filter((o) => ownsAsBuyer(u, o));
+    const events = d.events.filter((e) => e.buyerId === u.id || (orderOf(e) && ownsAsBuyer(u, orderOf(e))));
+    return res.json({
+      user: auth.publicUser(u), modes, mandate: store.mandateFor(u.id), spentToday: store.spentToday(undefined, u.id),
+      merchants: d.merchants, orders, events: events.slice(0, 100), lostSales: [],
+    });
+  }
+  const shops = store.shopsOf(u);
+  const events = d.events.filter((e) => shops.includes(e.merchantId) || (orderOf(e) && ownsAsMerchant(u, orderOf(e))));
   res.json({
-    modes: { ai: ai.aiMode, paypal: paypal.paypalMode, webhooks: webhooks.webhookMode, toolkit: toolkit.toolkitReady },
-    mandate: d.mandate,
-    spentToday: store.spentToday(),
-    merchants: d.merchants,
-    orders: d.orders,
-    events: d.events.slice(0, 100),
-    lostSales: store.lostSales(),
+    user: auth.publicUser(u), modes,
+    mandate: d.mandate, // the default shopper rules, so an owner can see the minimum trust most buyers start with
+    spentToday: 0,
+    merchants: d.merchants.filter((m) => shops.includes(m.id)),
+    orders: d.orders.filter((o) => ownsAsMerchant(u, o)),
+    events: events.slice(0, 100),
+    lostSales: store.lostSales().filter((g) => shops.includes(g.merchantId)),
   });
 });
 
-app.put("/api/mandate", (req, res) => {
-  const d = store.data();
+app.put("/api/mandate", auth.requireRole("buyer"), (req, res) => {
+  const mandate = store.mandateFor(req.user.id);
   const m = req.body;
   for (const k of ["perOrderLimit", "dailyLimit", "askAbove", "minMerchantTrust"]) {
-    if (m[k] !== undefined) d.mandate[k] = Math.max(0, Number(m[k]) || 0);
+    if (m[k] !== undefined) mandate[k] = Math.max(0, Number(m[k]) || 0);
   }
-  if (Array.isArray(m.allowedCategories)) d.mandate.allowedCategories = m.allowedCategories.map(String);
-  if (m.requireRefundPolicy !== undefined) d.mandate.requireRefundPolicy = Boolean(m.requireRefundPolicy);
-  store.log("mandate", "Spending mandate updated", { mandate: d.mandate });
-  res.json(d.mandate);
+  if (Array.isArray(m.allowedCategories)) mandate.allowedCategories = m.allowedCategories.map(String);
+  if (m.requireRefundPolicy !== undefined) mandate.requireRefundPolicy = Boolean(m.requireRefundPolicy);
+  store.log("mandate", "Spending mandate updated", { mandate, buyerId: req.user.id });
+  res.json(mandate);
 });
 
-app.post("/api/reset", (req, res) => {
+// Resetting wipes everyone's orders, so only the shared demo accounts may do it.
+app.post("/api/reset", auth.requireUser, (req, res) => {
+  if (!req.user.demo) return res.status(403).json({ error: "Only the demo accounts can reset the demo data" });
   store.reset();
   res.json({ ok: true });
 });
@@ -119,7 +209,7 @@ async function fetchPublicPage(url) {
 const drafts = new Map();
 const DRAFT_TTL = 60 * 60 * 1000;
 
-app.post("/api/merchants/preview", wrap(async (req, res) => {
+app.post("/api/merchants/preview", auth.requireRole("merchant"), wrap(async (req, res) => {
   let { text = "", url = "", paypalEmail = "" } = req.body;
   let note;
   if (url) text = `${htmlToText(await fetchPublicPage(url))}\n${text}`;
@@ -132,14 +222,15 @@ app.post("/api/merchants/preview", wrap(async (req, res) => {
   const catalog = await ai.extractCatalog(text);
   for (const [k, v] of drafts) if (Date.now() - v.createdAt > DRAFT_TTL) drafts.delete(k);
   const draftId = store.id("draft");
-  drafts.set(draftId, { catalog, sourceText: text, createdAt: Date.now() });
+  drafts.set(draftId, { catalog, sourceText: text, createdAt: Date.now(), ownerId: req.user.id });
   const trust = guard.scoreNewMerchant({ ...catalog, paypalEmail, aiRedFlags: catalog.redFlags || [], sourceText: text });
   res.json({ draftId, catalog, note, trust });
 }));
 
-app.post("/api/merchants", (req, res) => {
+app.post("/api/merchants", auth.requireRole("merchant"), (req, res) => {
   const { draftId, products: edits = [], paypalEmail = "" } = req.body;
-  const draft = drafts.get(draftId);
+  const found = drafts.get(draftId);
+  const draft = found?.ownerId === req.user.id ? found : null;
   if (!draft) return res.status(400).json({ error: "Extract your catalog first (drafts expire after an hour), then publish" });
   const { catalog, sourceText } = draft;
   // Only names, prices and delivery days are editable; policies and red flags stay as the server read them.
@@ -163,6 +254,7 @@ app.post("/api/merchants", (req, res) => {
     categories: catalog.categories || [],
     refundPolicy: trust.refundGrounded ? catalog.refundPolicy : "",
     deliveryPolicy: catalog.deliveryPolicy || "",
+    ownerId: req.user.id,
     onboardedAt: new Date().toISOString(),
     completedOrders: 0,
     disputes: 0,
@@ -181,6 +273,7 @@ app.post("/api/merchants", (req, res) => {
   };
   drafts.delete(draftId);
   store.data().merchants.push(m);
+  req.user.merchantIds = [...(req.user.merchantIds || []), m.id];
   store.log("merchant", `${m.name} is now agent-ready with ${m.products.length} products (trust ${trust.score})`, { merchantId: m.id });
   toolkit.syncCatalog(m).catch((err) => store.log("paypal", `PayPal catalog sync failed: ${err.message}`, { merchantId: m.id }));
   res.json(m);
@@ -188,14 +281,15 @@ app.post("/api/merchants", (req, res) => {
 
 // ---------------------------------------------------------------- shopper agent + PayPal
 
-app.post("/api/agent/run", wrap(async (req, res) => {
+app.post("/api/agent/run", auth.requireRole("buyer"), wrap(async (req, res) => {
   const goal = String(req.body.goal || "").trim();
   if (!goal) return res.status(400).json({ error: "Tell the agent what to buy" });
-  store.log("agent", `Agent goal: ${goal}`);
-  const run = await ai.runShopper(goal);
+  const buyerId = req.user.id;
+  store.log("agent", `Agent goal: ${goal}`, { buyerId });
+  const run = await ai.runShopper(goal, { buyerId });
   for (const c of run.checks) {
     if (c.decision !== "block") continue;
-    store.log("guard", `Blocked ${c.productName} from ${c.merchantName}`, { checks: c.checks });
+    store.log("guard", `Blocked ${c.productName} from ${c.merchantName}`, { checks: c.checks, buyerId, merchantId: store.product(c.productId)?.merchant.id });
     store.recordMiss({ ...c, ...store.product(c.productId) });
   }
   let order = null;
@@ -207,20 +301,25 @@ app.post("/api/agent/run", wrap(async (req, res) => {
       reason: run.checkout.reason,
       goal,
       engine: run.engine,
+      buyerId,
     }));
   }
   res.json({ ...run, order });
 }));
 
+/** The order in the URL, if it is this person's: a buyer's own order, or an order from one of an owner's shops. */
 const findOrder = (req) => {
   const o = store.order(req.params.id);
-  if (!o) throw Object.assign(new Error("Order not found"), { status: 404 });
+  const mine = o && (req.user.role === "buyer" ? ownsAsBuyer(req.user, o) : ownsAsMerchant(req.user, o));
+  if (!mine) throw Object.assign(new Error("Order not found"), { status: 404 });
   return o;
 };
+const buyer = auth.requireRole("buyer");
+const owner = auth.requireRole("merchant");
 
-app.post("/api/orders/:id/confirm", wrap(async (req, res) => res.json(await orders.confirm(findOrder(req)))));
+app.post("/api/orders/:id/confirm", buyer, wrap(async (req, res) => res.json(await orders.confirm(findOrder(req)))));
 
-app.post("/api/orders/:id/decline", wrap(async (req, res) => {
+app.post("/api/orders/:id/decline", buyer, wrap(async (req, res) => {
   const o = findOrder(req);
   if (o.status !== "NEEDS_USER_OK") return res.status(409).json({ error: `Order is ${o.status}` });
   o.status = "DECLINED";
@@ -246,25 +345,26 @@ app.get("/paypal/cancel", (req, res) => {
 });
 
 // Merchant marks delivered -> capture the held funds.
-app.post("/api/orders/:id/fulfil", wrap(async (req, res) => res.json(await orders.capture(findOrder(req)))));
-app.post("/api/orders/:id/void", wrap(async (req, res) => res.json(await orders.release(findOrder(req)))));
-app.post("/api/orders/:id/refund", wrap(async (req, res) => res.json(await orders.refund(findOrder(req), req.body?.note))));
+app.post("/api/orders/:id/fulfil", owner, wrap(async (req, res) => res.json(await orders.capture(findOrder(req)))));
+app.post("/api/orders/:id/void", owner, wrap(async (req, res) => res.json(await orders.release(findOrder(req)))));
+app.post("/api/orders/:id/refund", owner, wrap(async (req, res) => res.json(await orders.refund(findOrder(req), req.body?.note))));
 
 // ---------------------------------------------------------------- webhooks + money assistant
 
 app.post("/api/webhooks/paypal", wrap(webhooks.receive));
 
-app.post("/api/assistant", wrap(async (req, res) => {
+app.post("/api/assistant", owner, wrap(async (req, res) => {
   const question = String(req.body.question || "").trim().slice(0, 500);
   if (!question) return res.status(400).json({ error: "Ask a question about your money" });
-  res.json(await ai.askAboutMoney(question));
+  res.json(await ai.askAboutMoney(question, { merchantIds: store.shopsOf(req.user), paypalReads: req.user.demo }));
 }));
 
 // ---------------------------------------------------------------- simulated PayPal (no keys)
 
-app.post("/api/sim/webhook", wrap(async (req, res) => {
+app.post("/api/sim/webhook", auth.requireUser, wrap(async (req, res) => {
   if (paypal.paypalMode !== "simulated") return res.status(404).json({ error: "Only available with the PayPal simulator" });
-  const o = store.order(String(req.body.orderId || ""));
+  const found = store.order(String(req.body.orderId || ""));
+  const o = found && (ownsAsBuyer(req.user, found) || ownsAsMerchant(req.user, found)) ? found : null;
   if (!o) return res.status(404).json({ error: "Order not found" });
   res.json(await webhooks.simulate(o, req.body.kind));
 }));

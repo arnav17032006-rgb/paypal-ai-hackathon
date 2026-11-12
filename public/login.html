@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log in · AgentReady</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="auth-page">
+  <main class="auth">
+    <div class="brand auth-brand"><span class="logo">◆</span> AgentReady <small>safe agent payments on PayPal</small></div>
+
+    <div class="card">
+      <div class="auth-tabs" role="tablist">
+        <button type="button" role="tab" data-mode="login" class="active" aria-selected="true">Log in</button>
+        <button type="button" role="tab" data-mode="signup" aria-selected="false">Create account</button>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <fieldset class="role-pick">
+          <legend id="role-legend">Log in as</legend>
+          <label class="role-card">
+            <input type="radio" name="role" value="buyer" checked />
+            <span><b>Buyer</b><small>Tell an AI agent what to buy, set spending rules, approve payments on PayPal.</small></span>
+          </label>
+          <label class="role-card">
+            <input type="radio" name="role" value="merchant" />
+            <span><b>Shop owner</b><small>Make your shop buyable by AI agents, fulfil orders and get paid through PayPal.</small></span>
+          </label>
+        </fieldset>
+
+        <div id="name-row" hidden>
+          <label for="name">Your name</label>
+          <input id="name" name="name" autocomplete="name" maxlength="60" />
+        </div>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" required />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+        <p class="muted" id="pw-hint" hidden>At least 8 characters.</p>
+
+        <p class="auth-error" id="auth-error" role="alert" hidden></p>
+        <button class="primary auth-submit" id="auth-submit" type="submit">Log in</button>
+      </form>
+    </div>
+
+    <div class="card demo-card">
+      <h3>Just looking? Try a demo account</h3>
+      <p class="muted">No sign-up needed. The demo shop owner manages the three sample shops.</p>
+      <div class="row">
+        <button type="button" class="demo-btn" data-role="buyer">Try as demo buyer</button>
+        <button type="button" class="demo-btn" data-role="merchant">Try as demo shop owner</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    let mode = "login";
+
+    function setMode(next) {
+      mode = next;
+      document.querySelectorAll(".auth-tabs button").forEach((b) => {
+        const on = b.dataset.mode === mode;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on);
+      });
+      const signup = mode === "signup";
+      $("#name-row").hidden = !signup;
+      $("#pw-hint").hidden = !signup;
+      $("#role-legend").textContent = signup ? "I am a" : "Log in as";
+      $("#password").autocomplete = signup ? "new-password" : "current-password";
+      $("#auth-submit").textContent = signup ? "Create account" : "Log in";
+      $("#auth-error").hidden = true;
+    }
+    document.querySelectorAll(".auth-tabs button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+    async function post(url, body) {
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(json.error || `Request failed (${r.status})`);
+      return json;
+    }
+
+    function showError(msg) {
+      $("#auth-error").textContent = msg;
+      $("#auth-error").hidden = false;
+    }
+
+    $("#auth-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const body = { email: f.get("email"), password: f.get("password"), role: f.get("role") };
+      if (mode === "signup") body.name = f.get("name");
+      const btn = $("#auth-submit");
+      btn.disabled = true;
+      try {
+        await post(mode === "signup" ? "/api/auth/signup" : "/api/auth/login", body);
+        location.href = "/";
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+      }
+    });
+
+    document.querySelectorAll(".demo-btn").forEach((b) => b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await post("/api/auth/demo", { role: b.dataset.role }); location.href = "/"; }
+      catch (err) { showError(err.message); b.disabled = false; }
+    }));
+
+    if (new URLSearchParams(location.search).get("mode") === "signup") setMode("signup");
+  </script>
+</body>
+</html>

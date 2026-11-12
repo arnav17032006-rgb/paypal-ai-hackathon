@@ -16,19 +16,25 @@ function toast(msg) {
 
 async function api(method, url, body) {
   const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) { location.href = "/login.html"; throw new Error("Please log in"); }
   const json = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(json.error || `Request failed (${r.status})`);
   return json;
 }
 
 // ---------------------------------------------------------------- tabs
+const role = () => state?.user.role;
+const tabsFor = (r) => (r === "merchant" ? ["merchant", "orders"] : ["shop", "orders", "mandate"]);
+
 function showTab(name) {
+  if (state && !tabsFor(role()).includes(name)) name = tabsFor(role())[0];
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === `tab-${name}`));
   if (location.hash !== `#${name}`) history.replaceState(null, "", `#${name}`);
   Object.values(grids).forEach((g) => g?.api && setTimeout(() => g.api.sizeColumnsToFit?.(), 0));
 }
 document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
 
 // ---------------------------------------------------------------- grids
 class ActionsRenderer {
@@ -103,22 +109,23 @@ function orderActions(o) {
     };
     el.append(b);
   };
-  if (o.status === "NEEDS_USER_OK") {
+  const isBuyer = role() === "buyer";
+  if (isBuyer && o.status === "NEEDS_USER_OK") {
     btn("Approve", async () => { const r = await api("POST", `/api/orders/${o.id}/confirm`); location.href = r.approveUrl; }, "primary");
     btn("Decline", () => api("POST", `/api/orders/${o.id}/decline`));
   }
   // Simulator only: fire the webhook PayPal would send, through the same handler real webhooks use.
   const sim = state?.modes.paypal === "simulated";
   const simEvent = (kind, msg) => api("POST", "/api/sim/webhook", { orderId: o.id, kind }).then(() => toast(msg));
-  if (o.status === "AWAITING_APPROVAL" && o.approveUrl) {
+  if (isBuyer && o.status === "AWAITING_APPROVAL" && o.approveUrl) {
     btn("Pay with PayPal", async () => { location.href = o.approveUrl; }, "primary");
     if (sim) btn("Sim webhook", () => simEvent("approved", "Webhook placed the hold without the redirect"), "", "Simulate PayPal's CHECKOUT.ORDER.APPROVED webhook: the buyer approved but closed the tab before returning");
   }
-  if (o.status === "AUTHORIZED") {
+  if (!isBuyer && o.status === "AUTHORIZED") {
     btn("Mark delivered", () => api("POST", `/api/orders/${o.id}/fulfil`).then(() => toast("Captured: money sent to the merchant")), "primary");
     btn("Release hold", () => api("POST", `/api/orders/${o.id}/void`));
   }
-  if (o.status === "CAPTURED") {
+  if (!isBuyer && o.status === "CAPTURED") {
     btn("Refund", () => api("POST", `/api/orders/${o.id}/refund`).then(() => toast("Refunded through PayPal")));
     if (sim && !o.disputeId) btn("Sim dispute", () => simEvent("dispute", "Dispute webhook: merchant trust lowered"), "", "Simulate PayPal's CUSTOMER.DISPUTE.CREATED webhook for this payment");
   }
@@ -144,12 +151,23 @@ function renderKpis() {
   const held = o.filter((x) => x.status === "AUTHORIZED");
   const blocked = state.events.filter((e) => e.type === "guard" && e.message.startsWith("Blocked")).length;
   const k = (v, l) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+  if (role() === "merchant") {
+    const lost = state.lostSales.reduce((s, g) => s + g.times, 0);
+    $("#kpis").innerHTML =
+      k(money(captured.reduce((s, x) => s + x.amount, 0)), "Paid to you") +
+      k(money(held.reduce((s, x) => s + x.amount, 0)), "Held, deliver to get paid") +
+      k(o.length, "Agent orders") +
+      k(lost, "Sales stopped by the guard") +
+      k(state.merchants.length, "Your shops");
+    return;
+  }
+  const waiting = o.filter((x) => x.status === "NEEDS_USER_OK" || x.status === "AWAITING_APPROVAL").length;
   $("#kpis").innerHTML =
-    k(money(captured.reduce((s, x) => s + x.amount, 0)), "Paid to merchants") +
-    k(money(held.reduce((s, x) => s + x.amount, 0)), "Held, awaiting delivery") +
-    k(`${money(state.spentToday)} / ${money(state.mandate.dailyLimit)}`, "Agent spend today") +
-    k(blocked, "Risky payments blocked") +
-    k(state.merchants.length, "Agent-ready merchants");
+    k(`${money(state.spentToday)} / ${money(state.mandate.dailyLimit)}`, "Your agent spend today") +
+    k(money(held.reduce((s, x) => s + x.amount, 0)), "Held until delivery") +
+    k(money(captured.reduce((s, x) => s + x.amount, 0)), "Paid to shops") +
+    k(waiting, "Waiting for your approval") +
+    k(blocked, "Risky payments blocked");
 }
 
 function renderMandate() {
@@ -164,15 +182,40 @@ function renderMandate() {
     `<div class="full"><button class="primary" type="submit">Save mandate</button></div>`;
 }
 
+/** Show only this person's side of the app: tabs, cards and wording for a buyer or a shop owner. */
+function applyRole() {
+  const r = role();
+  const u = state.user;
+  document.querySelectorAll("[data-role]").forEach((el) => { el.hidden = el.dataset.role !== r; });
+  $("#whoami").innerHTML = `<b>${esc(u.name)}</b> · ${r === "merchant" ? "Shop owner" : "Buyer"}`;
+  $("#orders-nav").textContent = r === "merchant" ? "Orders & payouts" : "My orders";
+  $("#orders-title").textContent = r === "merchant" ? "Orders for your shops" : "Your agent's orders";
+  $("#orders-help").textContent = r === "merchant"
+    ? "Funds are held when the buyer approves on PayPal. \"Mark delivered\" captures them to you; \"Release hold\" gives them back."
+    : "You approve each payment on PayPal. Funds are only held until the shop delivers, then captured.";
+  $("#reset-card").hidden = !u.demo;
+  $("#no-shops").hidden = r !== "merchant" || state.merchants.length > 0;
+  // Outside agents shop under this buyer's own rules, using their personal key. The demo buyer uses the public endpoint.
+  const url = `${location.origin}/mcp`;
+  const key = u.agentKey;
+  $("#mcp-key-note").hidden = !key;
+  $("#mcp-claude-code").textContent = key
+    ? `claude mcp add --transport http agentready ${url} --header "Authorization: Bearer ${key}"`
+    : `claude mcp add --transport http agentready ${url}`;
+  const args = ["-y", "mcp-remote", url, ...(key ? ["--header", `Authorization: Bearer ${key}`] : [])];
+  $("#mcp-desktop").textContent = JSON.stringify({ mcpServers: { agentready: { command: "npx", args } } }, null, 2);
+}
+
 async function refresh() {
   state = await api("GET", "/api/state");
+  applyRole();
   renderModes();
   renderKpis();
   grids["grid-orders"].api.setGridOption("rowData", state.orders);
   grids["grid-events"].api.setGridOption("rowData", state.events);
   grids["grid-merchants"].api.setGridOption("rowData", state.merchants);
   grids["grid-lost"].api.setGridOption("rowData", state.lostSales);
-  if (!document.activeElement?.closest("#mandate-form")) renderMandate();
+  if (role() === "buyer" && !document.activeElement?.closest("#mandate-form")) renderMandate();
 }
 
 // ---------------------------------------------------------------- shopper agent
@@ -275,7 +318,7 @@ function renderCatalog(r) {
     ${c.redFlags?.length ? `<p class="flags">⚠ AI flagged: ${c.redFlags.map(esc).join(" · ")}</p>` : ""}
     ${t.flags.length ? `<p class="flags code">⛔ Found in your text (checked in code, not by AI): ${t.flags.map((f) => esc(f.label)).join(" · ")}</p>` : ""}
     <div class="decision ${t.score >= min ? "allow" : "block"}"><b>Trust ${t.score}/100</b> ${badge(t.level)}
-      ${t.score >= min ? "Agents can buy from this shop." : `Below the shopper's minimum of ${min}, so agents will not buy here.`}
+      ${t.score >= min ? "Agents can buy from this shop." : `Below the default buyer minimum of ${min}, so most agents will not buy here.`}
       <br><span class="muted">${t.reasons.map(esc).join(" · ")}</span></div>
     <table class="products"><tr><th>Product</th><th>USD</th><th>Category</th><th>Days</th></tr>
     ${c.products.map((p, i) => `<tr><td><input data-i="${i}" data-k="name" value="${esc(p.name)}"></td><td><input data-i="${i}" data-k="price" type="number" step="0.01" value="${p.price}"></td><td>${esc(p.category)}</td><td><input data-i="${i}" data-k="deliveryDays" type="number" value="${p.deliveryDays}"></td></tr>`).join("")}
@@ -308,9 +351,11 @@ $("#assistant-form").addEventListener("submit", async (e) => {
   } catch (err) { toast(err.message); } finally { btn.disabled = false; }
 });
 
-// ---------------------------------------------------------------- MCP connect snippets
-$("#mcp-claude-code").textContent = `claude mcp add --transport http agentready ${location.origin}/mcp`;
-$("#mcp-desktop").textContent = JSON.stringify({ mcpServers: { agentready: { command: "npx", args: ["-y", "mcp-remote", `${location.origin}/mcp`] } } }, null, 2);
+// ---------------------------------------------------------------- account
+$("#logout-btn").addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  location.href = "/login.html";
+});
 
 // ---------------------------------------------------------------- mandate
 $("#mandate-form").addEventListener("submit", async (e) => {
@@ -322,13 +367,13 @@ $("#mandate-form").addEventListener("submit", async (e) => {
       minMerchantTrust: f.get("minMerchantTrust"), allowedCategories: f.getAll("cat"), requireRefundPolicy: f.get("requireRefundPolicy") === "on",
     });
     document.activeElement?.blur();
-    toast("Mandate saved");
+    toast("Spending rules saved");
     await refresh();
   } catch (err) { toast(err.message); }
 });
 
 $("#reset-btn").addEventListener("click", async () => {
-  if (!confirm("Reset all orders, events and onboarded merchants?")) return;
+  if (!confirm("Reset the demo orders, events and any shops added since?")) return;
   await api("POST", "/api/reset");
   await refresh();
   toast("Demo data reset");
@@ -341,6 +386,5 @@ $("#reset-btn").addEventListener("click", async () => {
   if (params.get("paid")) toast("Approved on PayPal: funds are held until the merchant delivers");
   if (params.get("blocked")) toast("The guard blocked this after approval, so no funds were held. See the audit trail.");
   if (params.get("paid") || params.get("blocked")) history.replaceState(null, "", location.pathname + location.hash);
-  const tab = (location.hash || "#shop").slice(1);
-  showTab(["shop", "merchant", "orders", "mandate"].includes(tab) ? tab : "shop");
+  showTab((location.hash || "#").slice(1));
 })();
