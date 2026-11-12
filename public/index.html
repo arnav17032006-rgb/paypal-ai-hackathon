@@ -13,7 +13,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-grid.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-theme-quartz.css" />
   <link rel="stylesheet" href="/styles.css" />
@@ -21,26 +21,24 @@
 <body>
   <div class="shell">
     <aside class="side">
-      <div class="brand">
-        <span class="brand-mark" data-icon="shield"></span>
-        <span>AgentReady<small>Safe agent payments</small></span>
-      </div>
+      <div class="brand"><span class="brand-mark" data-icon="check"></span>AgentReady</div>
 
+      <div class="eyebrow nav-label" id="nav-label">Buyer</div>
       <nav aria-label="Sections">
-        <button data-tab="shop" data-role="buyer"><span data-icon="sparkles"></span>Shop with agent</button>
-        <button data-tab="discover" data-role="buyer"><span data-icon="store"></span>Agent-ready shops</button>
-        <button data-tab="merchant" data-role="merchant"><span data-icon="store"></span>My shops</button>
-        <button data-tab="insights" data-role="merchant"><span data-icon="chart"></span>Why agents didn't buy</button>
-        <button data-tab="orders"><span data-icon="receipt"></span><span id="orders-nav">Orders</span><span class="count" id="orders-count" hidden></span></button>
-        <button data-tab="mandate" data-role="buyer"><span data-icon="sliders"></span>Spending rules</button>
+        <button data-tab="shop" data-role="buyer">Shop with agent</button>
+        <button data-tab="discover" data-role="buyer">Shops</button>
+        <button data-tab="merchant" data-role="merchant">My shops</button>
+        <button data-tab="insights" data-role="merchant">Lost sales</button>
+        <button data-tab="orders"><span id="orders-nav">Orders</span><span class="count" id="orders-count" hidden></span></button>
+        <button data-tab="mandate" data-role="buyer">Spending rules</button>
       </nav>
 
       <div class="side-foot">
+        <div class="tour" id="tour" hidden></div>
         <div class="sys" id="modes" aria-label="System status"></div>
         <div class="me">
-          <span class="avatar" id="avatar"></span>
           <span style="min-width:0;flex:1"><div class="me-name" id="me-name"></div><div class="me-role" id="me-role"></div></span>
-          <button class="icon-btn" id="theme-btn" type="button" title="Switch light / dark theme" aria-label="Switch theme"><span data-icon="moon"></span></button>
+          <button class="icon-btn" id="theme-btn" type="button" title="Switch light / dark theme" aria-label="Switch theme"></button>
           <button class="icon-btn" id="logout-btn" type="button" title="Log out" aria-label="Log out"><span data-icon="logout"></span></button>
         </div>
       </div>
@@ -53,8 +51,8 @@
           <p id="page-sub"></p>
         </div>
         <div class="top-actions">
-          <span class="tag" title="Every payment is checked by plain code the AI cannot override"><span data-icon="shield"></span>Trust guard on</span>
-          <span class="tag" id="top-paypal"></span>
+          <span title="Every payment is checked by plain code the AI cannot override"><span class="dot live"></span>Trust guard on</span>
+          <span id="top-paypal"></span>
         </div>
       </header>
 
@@ -65,13 +63,13 @@
             <div>
               <div class="card composer">
                 <h2>What should your agent buy?</h2>
-                <p class="muted">It searches agent-ready shops, checks every option against your rules and the trust guard, then pays through PayPal. Money is only held until the shop delivers.</p>
                 <form id="goal-form">
                   <div class="composer-box">
-                    <textarea id="goal" rows="2" placeholder="e.g. Get a chocolate birthday cake under $30, needed tomorrow" aria-label="What to buy"></textarea>
-                    <button type="submit" class="primary btn-ic" id="goal-btn"><span data-icon="sparkles"></span><span id="goal-btn-label">Run agent</span></button>
+                    <textarea id="goal" rows="2" placeholder="A chocolate birthday cake under $30, needed tomorrow" aria-label="What to buy"></textarea>
+                    <button type="submit" class="primary" id="goal-btn"><span id="goal-btn-label">Run agent</span></button>
                   </div>
                   <div class="chips">
+                    <span class="eyebrow">Try</span>
                     <button type="button" class="chip">Chocolate birthday cake under $30, needed tomorrow</button>
                     <button type="button" class="chip">Cheap wireless earbuds as a gift</button>
                     <button type="button" class="chip">A machine learning textbook for my friend</button>
@@ -82,25 +80,25 @@
               <div id="agent-result"></div>
 
               <div class="card">
-                <div class="card-head"><h3>Bring your own agent (MCP)</h3><span class="tag"><span class="dot live"></span>/mcp is live</span></div>
+                <div class="card-head"><h3>Bring your own agent</h3><span class="tag"><span class="dot live"></span>MCP at /mcp</span></div>
                 <p class="muted">Any MCP-capable assistant can shop these stores through the same guard, under your spending rules. It gets search, guard dry-run and checkout tools, and you still approve every payment on PayPal.</p>
                 <p class="muted" id="mcp-key-note" hidden>These commands include your personal agent key. Keep it private: anyone with it can ask for purchases under your rules (you still approve each payment).</p>
-                <p class="muted"><b>Claude Code</b></p>
+                <span class="eyebrow">Claude Code</span>
                 <pre class="cmd" id="mcp-claude-code"></pre>
-                <p class="muted"><b>Claude Desktop</b>: Settings → Developer → Edit Config, then restart</p>
+                <span class="eyebrow">Claude Desktop · Settings → Developer → Edit Config, then restart</span>
                 <pre class="cmd" id="mcp-desktop"></pre>
               </div>
             </div>
 
-            <div>
-              <div class="card">
-                <div class="card-head"><h3>Your guardrails</h3><button class="ghost" type="button" data-goto="mandate">Edit</button></div>
+            <div class="rail">
+              <section>
+                <div class="card-head"><span class="eyebrow">Your guardrails</span><button class="ghost" type="button" data-goto="mandate">Edit</button></div>
                 <div id="guardrails"></div>
-              </div>
-              <div class="card">
-                <div class="card-head"><h3>Waiting for you</h3><button class="ghost" type="button" data-goto="orders">All orders</button></div>
+              </section>
+              <section>
+                <div class="card-head"><span class="eyebrow">Waiting for you</span><button class="ghost" type="button" data-goto="orders">All orders</button></div>
                 <div id="inbox"></div>
-              </div>
+              </section>
             </div>
           </div>
         </section>
@@ -112,40 +110,47 @@
 
         <!-- ============================================================ merchant: shops -->
         <section id="tab-merchant" class="tab" data-role="merchant">
+          <div id="shops-owner" class="shops"></div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-head"><h3>Live catalog</h3><span class="muted small">Double-click a shaded cell to change a price, stock or delivery time. Agents see it at once.</span></div>
+            <div class="grid-tools">
+              <input id="catalog-filter" type="search" placeholder="Filter products" aria-label="Filter products" />
+              <span class="spacer"></span>
+              <a class="small" href="/api/agent-feed" target="_blank" rel="noopener">Agent feed (JSON) ↗</a>
+            </div>
+            <div id="grid-catalog" class="ag-theme-quartz grid short"></div>
+          </div>
+
           <div class="card">
-            <h2>Make your shop agent-ready in a minute</h2>
-            <p class="muted">Paste your Instagram captions, WhatsApp price list or website text, or give a URL.</p>
+            <h2>Add a shop</h2>
             <div class="steps3">
-              <div><b><i>1</i>Paste your shop text</b>Captions, a price list or a web page.</div>
-              <div><b><i>2</i>AI builds the catalog</b>Scam and prompt-injection checks run in code.</div>
-              <div><b><i>3</i>Agents can buy</b>Paid straight into your PayPal.</div>
+              <div><i>01</i><b>Paste your shop text</b>Instagram captions, a WhatsApp price list or a web page.</div>
+              <div><i>02</i><b>AI builds the catalog</b>Scam and prompt-injection checks run in code, not in the model.</div>
+              <div><i>03</i><b>Agents can buy</b>Paid straight into your PayPal.</div>
             </div>
             <form id="onboard-form">
               <input id="ob-url" type="url" placeholder="https://your-shop.example (optional)" aria-label="Shop URL" />
               <textarea id="ob-text" rows="6" placeholder="Paste your shop text here" aria-label="Shop text"></textarea>
               <input id="ob-email" type="email" placeholder="Your PayPal (sandbox) email for payouts" aria-label="PayPal email" />
               <div class="row">
-                <button type="submit" class="primary btn-ic" id="ob-btn"><span data-icon="sparkles"></span><span id="ob-btn-label">Extract catalog</span></button>
+                <button type="submit" class="primary" id="ob-btn"><span id="ob-btn-label">Extract catalog</span></button>
                 <button type="button" id="ob-sample">Use a sample shop</button>
-                <button type="button" id="ob-sample-bad" class="danger">Try a suspicious shop</button>
+                <button type="button" id="ob-sample-bad">Try a suspicious shop</button>
               </div>
             </form>
           </div>
           <div id="onboard-result"></div>
-          <div class="card-head" style="margin:22px 2px 12px"><h2>Your shops</h2><a class="small" href="/api/agent-feed" target="_blank" rel="noopener">Machine-readable agent feed ↗</a></div>
-          <div id="shops-owner" class="shops"></div>
         </section>
 
         <!-- ============================================================ merchant: insights -->
         <section id="tab-insights" class="tab" data-role="merchant">
           <div class="card">
             <h3>Which rules stop your sales</h3>
-            <p class="muted">Every sale the trust guard stopped, counted by rule. Red rules are yours to fix; blue rules are the buyer's own limits.</p>
             <div id="lost-bars"></div>
           </div>
           <div class="card">
             <h3>Every stopped sale, and what to do about it</h3>
-            <p class="muted">Grouped by shop, product and rule.</p>
             <div id="grid-lost" class="ag-theme-quartz grid"></div>
           </div>
         </section>
@@ -154,29 +159,34 @@
         <section id="tab-orders" class="tab">
           <div id="kpis" class="kpis"></div>
           <div class="card" id="flow-card">
-            <h3>Where the money is</h3>
+            <span class="eyebrow">Where the money is</span>
             <div id="flow"></div>
           </div>
           <div class="card">
-            <div class="card-head"><h3 id="orders-title">Agent orders</h3><span class="muted small">Click a row for the full guard report</span></div>
-            <p class="muted" id="orders-help"></p>
+            <div class="card-head"><h3 id="orders-title">Agent orders</h3><span class="muted small" id="orders-help"></span></div>
+            <div class="grid-tools">
+              <input id="orders-filter" type="search" placeholder="Filter orders: item, shop, status, PayPal id" aria-label="Filter orders" />
+              <span class="spacer"></span>
+              <button type="button" id="orders-export">Export CSV</button>
+            </div>
             <div id="grid-orders" class="ag-theme-quartz grid"></div>
           </div>
           <div class="card" data-role="merchant">
             <h3>Ask about the money</h3>
             <p class="muted" id="assistant-note">Answers from AgentReady's ledger.</p>
             <form id="assistant-form" class="row">
-              <input id="assistant-q" placeholder="e.g. How much have agents paid Crumbs &amp; Co. this week, and is anything still held?" style="flex:1;margin:0" aria-label="Question about your money" />
+              <input id="assistant-q" placeholder="How much have agents paid Crumbs &amp; Co. this week, and is anything still held?" style="flex:1;margin:0" aria-label="Question about your money" />
               <button class="primary" id="assistant-btn">Ask</button>
             </form>
-            <div class="chips" style="margin-top:10px">
+            <div class="chips" style="margin-top:12px">
+              <span class="eyebrow">Try</span>
               <button type="button" class="chip ask-chip">How much is held and waiting for delivery?</button>
               <button type="button" class="chip ask-chip">Which shop earned the most from agents?</button>
               <button type="button" class="chip ask-chip">Any refunds or disputes I should know about?</button>
             </div>
             <div id="assistant-answer"></div>
           </div>
-          <div class="card"><h3>Audit trail</h3><p class="muted">Every agent goal, guard verdict, PayPal call and webhook.</p><div id="grid-events" class="ag-theme-quartz grid short"></div></div>
+          <div class="card"><h3>Audit trail</h3><div id="grid-events" class="ag-theme-quartz grid short"></div></div>
         </section>
 
         <!-- ============================================================ buyer: rules -->
@@ -184,8 +194,8 @@
           <div class="cols">
             <div>
               <div class="card">
-                <h2>The rules your agent can never break</h2>
-                <p class="muted">The trust guard enforces them in code, at checkout, when you approve and again before money is held. The AI can explain a decision but never override one.</p>
+                <h2>Rules your agent cannot break</h2>
+                <p class="muted">Checked in code at checkout, when you approve, and again before PayPal holds any money. The AI can explain a decision; it cannot change one.</p>
                 <form id="mandate-form" class="mandate"></form>
               </div>
               <div class="card" id="reset-card" hidden>
@@ -194,10 +204,12 @@
                 <button id="reset-btn" class="danger">Reset demo data</button>
               </div>
             </div>
-            <div class="card">
-              <h3>What your saved rules allow</h3>
-              <p class="muted">The guard's real verdict on one of every product listed right now.</p>
-              <div id="coverage"></div>
+            <div class="rail">
+              <section>
+                <span class="eyebrow">What your saved rules allow</span>
+                <p class="muted small" style="margin:4px 0 0">The guard's real verdict on one of every product listed right now.</p>
+                <div id="coverage"></div>
+              </section>
             </div>
           </div>
         </section>

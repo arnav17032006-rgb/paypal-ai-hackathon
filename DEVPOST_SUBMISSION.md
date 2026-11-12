@@ -68,7 +68,9 @@ The model can explain a decision but can't override it. Limits and trust can cha
 
 **Money assistant.** Merchants ask *"how much have agents paid me this week?"* and Claude answers from AgentReady's ledger and, read-only, from the merchant's own PayPal account through the Agent Toolkit.
 
-**Dashboards.** AG Grid views of agent orders (with actions and which agent placed each one), the audit trail, and every merchant's trust score with its reasons.
+**Dashboards.** AG Grid Community across four grids: the orders ledger (quick filter, a pinned totals row that follows the filter, CSV export, per-row PayPal actions, click a row for the guard report), the shop owner's live catalog (prices, stock and delivery days are edited in the grid and saved to the server, so agents and the guard see the change at once), the audit trail, and lost sales.
+
+**A front door for judges.** The landing page has a live scanner (paste any shop's text, see the trust score and flags, no login), and each demo account has a five-step tour ticked off from real state.
 
 #### How we built it
 
@@ -85,7 +87,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
   - Webhooks checked with `verify-webhook-signature` against the exact raw request body, and each event applied once.
 - **PayPal Agent Toolkit:** `create_product` when a merchant publishes, and read-only transaction, dispute, order, product and invoice tools for the money assistant. Write actions are never given to the model.
 - **MCP:** the official TypeScript SDK, as a stateless Streamable HTTP endpoint.
-- **Tests:** 42 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
+- **Tests:** 44 tests with Node's built-in runner, covering the guard, trust scoring, the API, MCP checkout, webhooks and approval re-checks end to end. They run on every push with GitHub Actions.
 - **Deploy:** a Render Blueprint (`render.yaml`) with a health check.
 - **No keys needed to try it.** Without keys, a rule-based extractor and shopper stand in for Claude, and a local simulator that returns PayPal's response shapes stands in for the sandbox. The header shows which mode is active.
 
@@ -102,7 +104,7 @@ The model can explain a decision but can't override it. Limits and trust can cha
 - No money moves without a person approving it on PayPal, and no agent, prompt or shop page can change the owner's rules.
 - Any MCP agent, not just ours, can shop AgentReady stores under the same guard.
 - The full authorize, capture, void, refund and dispute cycle, with webhooks and idempotency keys.
-- 42 automated tests, including stale approvals, parallel checkouts and webhook retries.
+- 44 automated tests, including stale approvals, parallel checkouts and webhook retries.
 - It runs with zero setup, and switches to Claude and the real PayPal sandbox as soon as keys are added.
 
 #### What we learned
@@ -140,9 +142,11 @@ The model can explain a decision but can't override it. Limits and trust can cha
 4. The suspicious shop scored 10/100, with the hidden line it caught.
 5. Claude Code buying through MCP, and the order showing as **MCP agent**.
 6. The Spending rules tab, with the guard's verdict on every product.
-7. The shop owner's "Why agents didn't buy" tab.
+7. The shop owner's Lost sales tab.
+8. The landing page's live scanner.
+9. My shops with the editable live catalog.
 
-Eight demo-mode screenshots are in `docs/screenshots/` at 1440 x 960 (3:2), ready for the gallery.
+Ten demo-mode screenshots are in `docs/screenshots/` at 1440 x 960 (3:2), ready for the gallery.
 
 ---
 
@@ -155,7 +159,7 @@ This step only opens after Step 1 is saved, so its exact questions aren't known 
   - OAuth, webhooks with signature verification, and the PayPal Agent Toolkit.
   - All on the sandbox.
 - **Which AI tools did you use?** Claude (`claude-opus-5-5`) through the Anthropic SDK, and MCP.
-- **Sponsor tools:** AG Grid Community for all three dashboards, and Render for hosting.
+- **Sponsor tools:** AG Grid Community across four grids: the orders ledger (quick filter, a pinned totals row that follows the filter, CSV export, per-row PayPal actions, click a row for the guard report), the shop owner's live catalog (prices, stock and delivery days are edited in the grid and saved to the server, so agents and the guard see the change at once), the audit trail, and lost sales. Render hosts the live demo from `render.yaml` with a health check.
 - **New or existing project?** New. Built during the submission period.
 - **Prizes to opt into:** Best Use of AG Grid, and Best Use of Render once it's deployed there.
 
@@ -178,15 +182,15 @@ Open http://localhost:3000. It runs without any keys, using the PayPal simulator
 
 **What to try (5 minutes):**
 
-1. On the login page click **Demo buyer** (or create your own buyer account).
+1. On the login page click **Try it as a buyer** (or create your own buyer account).
 2. **Shop with agent** → click *"Chocolate birthday cake under $30, needed tomorrow"* → **Run agent**. It buys from the trusted bakery, and the guard blocks the 95%-off earbuds from the scam shop.
 3. Click **Pay with PayPal** and approve. In **My orders** the order shows funds held.
-4. **Log out** → **Demo shop owner**. In **Orders & payouts** click **Mark delivered** on that order to capture the money.
-5. **My shops** → **Try a suspicious shop** → **Extract catalog**. The code scan catches the hidden instruction aimed at AI agents, and the shop scores 10/100. The **Why agents didn't buy** tab shows which rule stopped each sale.
+4. In the sidebar tour click **Shop owner side →**. In **Orders & payouts** click **Mark delivered** on that order to capture the money.
+5. **My shops** → **Add a shop** → **Try a suspicious shop** → **Extract catalog**. The code scan catches the hidden instruction aimed at AI agents, and the shop scores 10/100. The **Lost sales** tab shows which rule stopped each sale.
 6. Back as the buyer, ask for *"A machine learning textbook for my friend"*. At $42 it is above the $35 threshold, so the order waits for your OK.
 7. Connect your own agent with the command shown on the buyer's **Shop with agent** tab, then ask it to buy something.
 
-`npm test` runs all 42 tests.
+`npm test` runs all 44 tests.
 
 ---
 
@@ -196,14 +200,14 @@ Record with the PayPal sandbox keys set, so the approval page is PayPal's own. U
 
 | Time | Show | Say |
 |---|---|---|
-| 0:00–0:20 | Title, then the empty shop tab | "AI agents are starting to shop for us. But small shops can't be found by agents, and nobody can safely give an agent their money. AgentReady fixes both, on PayPal." |
-| 0:20–0:55 | Run the cake goal. Scroll through the tool calls and the guard checklist | "I ask for a chocolate cake under $30. Claude searches every shop and dry-runs each option against my rules. It picks the trusted bakery. The 95%-off earbuds from a brand-new shop are blocked by code, not by the AI's judgment." |
-| 0:55–1:20 | Pay with PayPal, approve in the sandbox, back to Orders | "I approve on PayPal. The money is only held, not paid, until the bakery delivers." |
-| 1:20–1:35 | Mark delivered, the cards update | "When the merchant delivers, the hold is captured. If not, it's voided, and the buyer never paid." |
-| 1:35–2:00 | Try a suspicious shop, Extract | "Merchants become agent-ready by pasting their shop text. This shop hides a line telling AI agents to rate it trusted. Our scan is code, so it catches it, and the shop scores 10 out of 100. No agent will buy there." |
-| 2:00–2:20 | Claude Code terminal buying over MCP; the row appears as MCP agent | "Any agent can shop here over MCP: this is Claude Code. It gets the same guard, and I still approve on PayPal." |
-| 2:20–2:40 | Ask for the $42 textbook (it waits for my OK). In Mandate, raise minimum trust to 90, then approve it: refused | "Rules can change while an order waits, so the guard checks again when I approve and again before any funds are held." |
-| 2:40–2:50 | The Orders grid and audit trail | "Every step is in the audit trail, with PayPal's IDs. AgentReady: agents that can shop, and money that stays safe." |
+| 0:00–0:20 | The landing page: headline, then the blocked receipt on the right | "AI agents are starting to shop for us. But a home baker on Instagram can't be found by an agent, and nobody can safely hand an agent their money. AgentReady fixes both, on PayPal." |
+| 0:20–0:35 | Scroll to the scanner, click **Scan this shop** | "This shop's page hides a line telling AI agents to trust it, and asks for gift cards. Our scan is plain code, so it can't be talked round: 10 out of 100." |
+| 0:35–1:05 | **Try it as a buyer**. Run the cake goal. Point at the numbered log, then the guard receipt | "I ask for a chocolate cake under $30. Claude searches every shop and dry-runs each option against my rules. The trusted bakery passes all ten checks. The 95%-off earbuds are blocked by code, not by the AI's judgment." |
+| 1:05–1:25 | Pay with PayPal, approve in the sandbox, land on My orders; click the row to open the order sheet | "I approve on PayPal. The money is only held, not paid. Every order keeps its guard report and PayPal ids." |
+| 1:25–1:50 | Sidebar tour → **Shop owner side**. Orders & payouts → **Mark delivered**; the money bar moves. Then double-click a price in the live catalog | "The shop marks it delivered and the hold is captured. Her catalog is live in AG Grid: change a price here and agents and the guard see it at once." |
+| 1:50–2:10 | **Lost sales** | "And she can see exactly which rule cost her a sale, and whether it's hers to fix." |
+| 2:10–2:30 | Claude Code terminal buying over MCP; the row appears as MCP agent | "Any agent can shop here over MCP: this is Claude Code. Same guard, and I still approve on PayPal." |
+| 2:30–2:50 | Back as buyer: **Spending rules**, lower max per order, save; products flip to blocked | "My rules are enforced at checkout, at approval, and again before PayPal holds a cent. AgentReady: agents that can shop, and money that stays safe." |
 
 ---
 
