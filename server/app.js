@@ -104,6 +104,9 @@ app.get("/api/auth/me", auth.requireUser, (req, res) => res.json(auth.publicUser
 
 // ---------------------------------------------------------------- state
 
+// Public and cheap: for Render's health check and CI's start-up check. No user data.
+app.get("/api/health", (req, res) => res.json({ ok: true, modes: { ai: ai.aiMode, paypal: paypal.paypalMode, webhooks: webhooks.webhookMode } }));
+
 const ownsAsBuyer = (u, o) => u.role === "buyer" && store.buyerOf(o) === u.id;
 const ownsAsMerchant = (u, o) => u.role === "merchant" && store.shopsOf(u).includes(o.merchantId);
 

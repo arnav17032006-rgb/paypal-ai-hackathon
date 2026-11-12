@@ -38,6 +38,7 @@ async function signup(role, extra = {}) {
 test("the app needs a login, and the login page sends logged-in people to the app", async () => {
   assert.equal((await call("GET", "/")).location, "/login.html");
   assert.equal((await call("GET", "/api/state")).status, 401);
+  assert.equal((await call("GET", "/api/health")).body.ok, true, "the health check needs no login");
   const { cookie } = await signup("buyer");
   assert.equal((await call("GET", "/", null, cookie)).status, 200);
   assert.equal((await call("GET", "/login.html", null, cookie)).location, "/");

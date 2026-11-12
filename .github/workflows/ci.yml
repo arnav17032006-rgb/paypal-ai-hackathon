@@ -37,8 +37,8 @@ jobs:
           AGENTREADY_DATA_DIR: ${{ runner.temp }}/agentready-data
         run: |
           npm start > server.log 2>&1 &
-          if curl -fsS --retry 10 --retry-delay 1 --retry-all-errors http://localhost:3000/api/state > /dev/null; then
-            echo "The app started in demo mode and answered /api/state."
+          if curl -fsS --retry 10 --retry-delay 1 --retry-all-errors http://localhost:3000/api/health > /dev/null; then
+            echo "The app started in demo mode and answered /api/health."
           else
             echo "The app did not answer. Server log:"
             cat server.log
